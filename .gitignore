@@ -1,0 +1,47 @@
+# ==========================================
+# DIAT - Reglas de Exclusión Git (.gitignore)
+# ==========================================
+
+# Archivos de Base de Datos y Scripts SQL
+*.sql
+*.sqlite
+*.db
+
+# Archivos de Datos Sensibles y Credenciales
+*.csv
+.env
+.env.*
+*.key
+*.pem
+*.cert
+
+# Volcados de Visitas Locales (Sincronizadas en Supabase)
+visitas.json
+data/visitas.json
+
+# Archivos temporales y de bloqueo de Microsoft Office
+~$*
+*.tmp
+*.bak
+
+# Entornos y Editores
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Logs y Pruebas Temporales
+*.log
+scratch/
+tests/
+test_*.html
+test_*.ps1
+run_*.ps1
+
+# Sistemas Operativos
+Thumbs.db
+Desktop.ini
+.DS_Store

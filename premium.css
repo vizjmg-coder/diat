@@ -3150,3 +3150,708 @@ button, select, input, .tab-btn, .kpi-card, .alert-filter-btn {
     gap: 3px;
 }
 
+/* ============================================================
+   NUEVO SISTEMA DE DISEÑO: PORTAL DEL SUPERVISOR DIAT (v3.5)
+   Estética Institucional Gobernación de Antioquia & Funcionalidad
+   ============================================================ */
+
+/* Banner Hero del Supervisor */
+.portal-hero-banner {
+    background: linear-gradient(135deg, #063826 0%, #0B5640 50%, #043828 100%);
+    border-radius: 20px;
+    padding: 24px 28px;
+    color: #ffffff;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px -5px rgba(6, 56, 38, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.portal-hero-banner::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 380px;
+    height: 380px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, rgba(11, 86, 64, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.portal-hero-banner::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: 20%;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(242, 142, 24, 0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+/* Avatar del Supervisor con indicador de estado */
+.portal-avatar-wrap {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+}
+
+.portal-avatar-img {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #10B981, #065F46);
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.portal-avatar-status {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 14px;
+    height: 14px;
+    background-color: #10B981;
+    border: 2px solid #063826;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #10B981;
+}
+
+/* Badges Institucionales del Header */
+.portal-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.portal-badge-role {
+    background: rgba(255, 255, 255, 0.12);
+    color: #E2E8F0;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(4px);
+}
+
+.portal-badge-security-ok {
+    background: rgba(16, 185, 129, 0.2);
+    color: #A7F3D0;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.portal-badge-security-warn {
+    background: rgba(245, 158, 11, 0.2);
+    color: #FDE68A;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+/* Botones de acción del Header */
+.portal-btn-action-primary {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 11.5px;
+    letter-spacing: 0.03em;
+    padding: 9px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+}
+
+.portal-btn-action-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+    filter: brightness(1.08);
+}
+
+.portal-btn-action-secondary {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 11.5px;
+    padding: 9px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+}
+
+.portal-btn-action-secondary:hover {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.portal-btn-action-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #FECACA;
+    font-weight: 600;
+    font-size: 11.5px;
+    padding: 9px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.18s ease;
+    cursor: pointer;
+}
+
+.portal-btn-action-danger:hover {
+    background: rgba(239, 68, 68, 0.3);
+    color: #FFFFFF;
+}
+
+/* Tarjetas Hero de KPIs (Top 4) */
+.portal-hero-kpi-card {
+    background: #FFFFFF;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 18px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.portal-hero-kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px -6px rgba(15, 23, 42, 0.08);
+    border-color: #CBD5E1;
+}
+
+.portal-hero-kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3.5px;
+    background: #CBD5E1;
+}
+
+.portal-hero-kpi-card.accent-emerald::before {
+    background: linear-gradient(90deg, #0B5640, #10B981);
+}
+
+.portal-hero-kpi-card.accent-blue::before {
+    background: linear-gradient(90deg, #1D4ED8, #38BDF8);
+}
+
+.portal-hero-kpi-card.accent-amber::before {
+    background: linear-gradient(90deg, #D97706, #FBBF24);
+}
+
+.portal-hero-kpi-card.accent-red::before {
+    background: linear-gradient(90deg, #DC2626, #F87171);
+}
+
+/* Barra Operativa Secundaria */
+.portal-secondary-bar {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 12px 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.portal-sec-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.portal-sec-stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0B5640;
+    font-size: 14px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.02);
+}
+
+/* Navegación por Sub-Pestañas Segmentadas */
+.portal-segmented-nav {
+    display: flex;
+    background: #F1F5F9;
+    padding: 5px;
+    border-radius: 16px;
+    gap: 4px;
+    overflow-x: auto;
+    border: 1px solid #E2E8F0;
+}
+
+.portal-segmented-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #64748B;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    outline: none;
+}
+
+.portal-segmented-btn:hover {
+    color: #0B5640;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.portal-segmented-btn.active {
+    background: #FFFFFF;
+    color: #0B5640;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    font-weight: 800;
+}
+
+.portal-segmented-count {
+    background: #E2E8F0;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    transition: all 0.18s ease;
+}
+
+.portal-segmented-btn.active .portal-segmented-count {
+    background: #ECFDF5;
+    color: #065F46;
+}
+
+/* Tarjetas Operativas de Convenios (Grid Rediseñado) */
+.portal-convenio-card-v2 {
+    background: #FFFFFF;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+    position: relative;
+}
+
+.portal-convenio-card-v2:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 28px -6px rgba(15, 23, 42, 0.08);
+    border-color: #0B5640;
+}
+
+.portal-card-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.portal-card-id-badge {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 14px;
+    font-weight: 800;
+    color: #0F172A;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.portal-card-btn-copy {
+    color: #94A3B8;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+
+.portal-card-btn-copy:hover {
+    color: #0B5640;
+    background: #ECFDF5;
+}
+
+.portal-dual-progress-wrap {
+    background: #F8FAFC;
+    border: 1px solid #F1F5F9;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.portal-card-actions-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 6px;
+    padding-top: 14px;
+    border-top: 1px solid #F1F5F9;
+}
+
+.portal-card-btn-edit {
+    padding: 8px 10px;
+    background: #ECFDF5;
+    color: #065F46;
+    border: 1px solid #A7F3D0;
+    border-radius: 10px;
+    font-size: 10.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.portal-card-btn-edit:hover {
+    background: #0B5640;
+    color: #FFFFFF;
+    border-color: #0B5640;
+}
+
+.portal-card-btn-visit {
+    padding: 8px 10px;
+    background: #EFF6FF;
+    color: #1D4ED8;
+    border: 1px solid #BFDBFE;
+    border-radius: 10px;
+    font-size: 10.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.portal-card-btn-visit:hover {
+    background: #1D4ED8;
+    color: #FFFFFF;
+    border-color: #1D4ED8;
+}
+
+.portal-card-btn-detail {
+    padding: 8px 10px;
+    background: #F8FAFC;
+    color: #475569;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 10.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.portal-card-btn-detail:hover {
+    background: #E2E8F0;
+    color: #0F172A;
+}
+
+/* Toolbar de búsqueda y filtros para convenios del supervisor */
+.portal-toolbar {
+    background: #FFFFFF;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 16px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    sm:flex-row;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.portal-search-box {
+    position: relative;
+    flex: 1;
+    width: 100%;
+}
+
+.portal-search-input {
+    width: 100%;
+    padding: 9px 14px 9px 36px;
+    background: #F8FAFC;
+    border: 1px solid #CBD5E1;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #1E293B;
+    outline: none;
+    transition: all 0.15s ease;
+}
+
+.portal-search-input:focus {
+    background: #FFFFFF;
+    border-color: #0B5640;
+    box-shadow: 0 0 0 3px rgba(11, 86, 64, 0.1);
+}
+
+.portal-filter-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    width: 100%;
+    sm:width: auto;
+}
+
+.portal-filter-chip {
+    padding: 6px 12px;
+    background: #F1F5F9;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+
+.portal-filter-chip:hover {
+    background: #E2E8F0;
+    color: #1E293B;
+}
+
+.portal-filter-chip.active {
+    background: #ECFDF5;
+    border-color: #A7F3D0;
+    color: #065F46;
+    font-weight: 700;
+}
+
+/* Tarjeta de Seguridad y Perfil */
+.portal-profile-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    lg:grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.portal-security-box {
+    background: #FFFFFF;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+}
+
+/* ============================================================
+   ANIMACIÓN Y ESTILOS DEL MODAL DE LOGIN DIAT (v3.5)
+   ============================================================ */
+@keyframes modal-fade-in {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.login-modal-card {
+    background: #ffffff;
+    border-radius: 24px;
+    border: 1.5px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 25px 50px -12px rgba(6, 56, 38, 0.28), 0 0 0 1px rgba(11, 86, 64, 0.08);
+    animation: modal-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 100%;
+    max-width: 410px;
+    overflow: hidden;
+}
+
+.login-modal-header {
+    background: linear-gradient(135deg, #063826 0%, #0B5640 60%, #084c37 100%);
+    padding: 26px 24px 22px;
+    text-align: center;
+    position: relative;
+    color: #ffffff;
+}
+
+.login-modal-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.login-modal-body {
+    padding: 24px 24px 26px;
+    background: #ffffff;
+}
+
+.login-input-group {
+    margin-bottom: 18px;
+}
+
+.login-input-group label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #064E3B;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 7px;
+}
+
+.login-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.login-input-icon {
+    position: absolute;
+    left: 14px;
+    color: #0B5640;
+    font-size: 13px;
+    pointer-events: none;
+    transition: color 0.2s;
+}
+
+.login-input-field {
+    width: 100%;
+    font-size: 13px;
+    padding: 12px 42px 12px 38px;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 12px;
+    font-weight: 600;
+    color: #0F172A;
+    background: #F8FAFC;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.login-input-field:focus {
+    background: #ffffff;
+    border-color: #0B5640;
+    box-shadow: 0 0 0 3.5px rgba(11, 86, 64, 0.14);
+}
+
+.login-input-field.input-username {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.login-toggle-pw {
+    position: absolute;
+    right: 12px;
+    background: transparent;
+    border: none;
+    color: #64748B;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, background 0.15s;
+}
+
+.login-toggle-pw:hover {
+    color: #0B5640;
+    background: #F1F5F9;
+}
+
+.login-quick-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #0B5640;
+    background: #ECFDF5;
+    border: 1px solid #A7F3D0;
+    border-radius: 6px;
+    padding: 2.5px 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.login-quick-chip:hover {
+    background: #0B5640;
+    color: #ffffff;
+    border-color: #0B5640;
+}
+
+.login-submit-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #0B5640 0%, #10B981 100%);
+    color: #ffffff;
+    border: none;
+    padding: 13px 18px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 14px rgba(11, 86, 64, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.login-submit-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(11, 86, 64, 0.35);
+    background: linear-gradient(135deg, #063826 0%, #059669 100%);
+}
+
+.login-submit-btn:active {
+    transform: translateY(0);
+}
+
+
+

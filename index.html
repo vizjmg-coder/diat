@@ -50,7 +50,8 @@
     <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
     <!-- Turf.js para disolver municipios en subregiones y contorno del departamento -->
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Supabase JS Client v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="premium.css">
@@ -200,6 +201,18 @@
                             class="ml-1 font-bold text-slate-900">Cargando...</span>
                     </div>
 
+                    <!-- Badge Cloud Supabase Sentinel -->
+                    <div id="header-supabase-badge" class="hidden lg:flex items-center gap-1.5 px-3 py-1 bg-emerald-50/90 border border-emerald-200 rounded-full shadow-xs cursor-default" title="Conexión en Tiempo Real Cifrada a Supabase Cloud PostgreSQL & Storage">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+                        </span>
+                        <span class="text-[10.5px] font-extrabold text-emerald-800 tracking-tight flex items-center gap-1">
+                            <i class="fa-solid fa-cloud text-[9px] text-emerald-700"></i>
+                            <span>Cloud Seguro</span>
+                        </span>
+                    </div>
+
                     <div style="width:1px;height:24px;background:#E2E8F0;" class="hidden sm:block"></div>
 
                     <!-- Perfil de usuario -->
@@ -236,6 +249,8 @@
                                     Alertas</button>
                                 <button class="user-menu-item" data-action="visitas"><i
                                         class="fa-solid fa-helmet-safety"></i>Visitas Técnicas</button>
+                                <button class="user-menu-item" data-action="cambiar-password"><i
+                                        class="fa-solid fa-key"></i>Seguridad y Contraseña</button>
                                 <button class="user-menu-item" data-action="config"><i
                                         class="fa-solid fa-sliders"></i>Configuración</button>
                                 <div style="height:1px;background:#E2E8F0;margin:6px 0;"></div>
@@ -1715,21 +1730,13 @@
 
                                     <!-- Acciones Rápidas -->
                                     <div class="flex items-center gap-2 flex-wrap w-full lg:w-auto">
-                                        <div id="vt-drive-sync-indicator" class="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200/80 rounded-xl text-xs font-bold shadow-2xs" title="Sincronización en tiempo real activa con Google Drive (visitas.json)">
-                                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                            <i class="fa-brands fa-google-drive text-emerald-600"></i>
-                                            <span>Drive en Vivo</span>
-                                            <button type="button" id="btn-vt-sync-drive" class="ml-1 text-emerald-600 hover:text-emerald-900 transition-colors p-0.5 rounded hover:bg-emerald-100" title="Sincronizar ahora con Google Drive">
-                                                <i class="fa-solid fa-rotate text-xs"></i>
-                                            </button>
-                                        </div>
                                         <button type="button" id="btn-vt-control-hub"
                                             class="flex-1 sm:flex-initial px-5 py-2.5 bg-institutional-primary hover:bg-institutional-light text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 border border-emerald-500/30 group"
-                                            title="Centro de Control de Visitas: Registrar, Programar y Editar (Requiere Contraseña)">
+                                            title="Centro de Control de Visitas: Registrar, Programar y Editar (Requiere credenciales de Administrador)">
                                             <i class="fa-solid fa-sliders text-emerald-300 text-sm group-hover:rotate-45 transition-transform"></i>
                                             <span>CONTROL DE VISITAS</span>
                                             <span class="text-[9.5px] bg-emerald-950/80 text-emerald-200 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">
-                                                <i class="fa-solid fa-lock text-[8px]"></i> Clave
+                                                <i class="fa-solid fa-lock text-[8px]"></i> Admin
                                             </span>
                                         </button>
                                         <button type="button" id="btn-vt-exportar-pdf"
@@ -2102,218 +2109,403 @@
                         </div>
                         <!-- Fin tab-visitas -->
 
-                        <!-- ================================================================
-                             PESTAÑA 4: PORTAL DEL SUPERVISOR
-                             ================================================================ -->
-                        <div id="tab-portal" class="tab-content hidden space-y-6">
+                                         <div id="tab-portal" class="tab-content hidden space-y-6">
 
                             <!-- VISTA NO AUTENTICADO -->
                             <div id="portal-unauthorized"
-                                class="flex flex-col items-center justify-center py-20 px-6 bg-white rounded-2xl"
-                                style="border:1.5px solid #E2E8F0; box-shadow:0 8px 24px rgba(15,23,42,0.04);">
+                                class="flex flex-col items-center justify-center py-20 px-6 bg-white rounded-3xl"
+                                style="border:1.5px solid #E2E8F0; box-shadow:0 12px 32px rgba(15,23,42,0.05);">
                                 <div
-                                    class="w-16 h-16 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-institutional-primary mb-6 animate-bounce">
-                                    <i class="fa-solid fa-user-shield text-2xl"></i>
+                                    class="w-20 h-20 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-institutional-primary mb-6 shadow-sm">
+                                    <i class="fa-solid fa-user-shield text-3xl text-emerald-700"></i>
                                 </div>
-                                <h2 class="text-xl font-bold text-slate-800 text-center mb-2">Acceso al Portal del
-                                    Supervisor</h2>
-                                <p class="text-slate-500 text-sm text-center max-w-md mb-6 leading-relaxed">
-                                    Para consultar tus convenios asignados y realizar el seguimiento técnico en sitio,
-                                    por favor inicia sesión en la plataforma.
+                                <span class="px-3 py-1 bg-emerald-100/70 text-emerald-800 text-[11px] font-black uppercase tracking-wider rounded-full mb-3">
+                                    Módulo Institucional DIAT
+                                </span>
+                                <h2 class="text-2xl font-black text-slate-800 text-center mb-2">Portal Oficial de Supervisión</h2>
+                                <p class="text-slate-500 text-sm text-center max-w-lg mb-8 leading-relaxed">
+                                    Plataforma técnica para el seguimiento contractual en sitio, georreferenciación de obras viales, registro de bitácoras de campo y control de hitos para supervisores de la Secretaría de Infraestructura.
                                 </p>
-                                <button type="button" id="btn-portal-login-trigger"
-                                    class="px-6 py-3 bg-institutional-primary hover:bg-institutional-light text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 text-sm uppercase letter-spacing-0.05em">
-                                    <i class="fa-solid fa-right-to-bracket"></i>
-                                    Iniciar Sesión
+                                <button type="button" id="btn-portal-login-trigger" onclick="window.openLoginModal(event)"
+                                    class="px-8 py-3.5 bg-institutional-primary hover:bg-institutional-light text-white font-black rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2.5 text-sm uppercase tracking-wider">
+                                    <i class="fa-solid fa-right-to-bracket text-base"></i>
+                                    Iniciar Sesión en el Portal
                                 </button>
                             </div>
 
                             <!-- VISTA AUTENTICADO -->
                             <div id="portal-authorized" class="hidden space-y-6">
-                                <!-- Portal Header -->
-                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl"
-                                    style="border:1.5px solid #E2E8F0; box-shadow:0 8px 24px rgba(15,23,42,0.04);">
-                                    <div>
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 rounded-full bg-institutional-pale border border-institutional-light/20 flex items-center justify-center text-institutional-primary font-bold text-sm"
-                                                id="portal-user-avatar">
-                                                JM
+                                
+                                <!-- 1. HERO BANNER DEL SUPERVISOR -->
+                                <div class="portal-hero-banner">
+                                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-5 relative z-10">
+                                        <!-- Perfil & Datos Oficiales -->
+                                        <div class="flex items-center gap-4">
+                                            <div class="portal-avatar-wrap">
+                                                <div class="portal-avatar-img" id="portal-user-avatar">
+                                                    JM
+                                                </div>
+                                                <div class="portal-avatar-status" title="Sesión activa y autenticada"></div>
                                             </div>
                                             <div>
-                                                <h2 class="text-lg font-bold text-slate-800" id="portal-welcome-title">
-                                                    Bienvenido, Jonathan Marín Gallego</h2>
-                                                <p
-                                                    class="text-xs text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
-                                                    Rol: Supervisor Técnico DIAT</p>
+                                                <div class="flex flex-wrap items-center gap-2 mb-1">
+                                                    <span class="portal-badge-pill portal-badge-role">
+                                                        <i class="fa-solid fa-id-badge text-[11px]"></i>
+                                                        <span id="portal-user-role-badge">Supervisor Técnico DIAT</span>
+                                                    </span>
+                                                    <span class="portal-badge-pill portal-badge-security-ok" id="portal-security-badge">
+                                                        <i class="fa-solid fa-lock text-[10px]"></i>
+                                                        <span>Contraseña Personalizada</span>
+                                                    </span>
+                                                </div>
+                                                <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight" id="portal-welcome-title">
+                                                    Bienvenido, Jonathan Marín Gallego
+                                                </h2>
+                                                <p class="text-xs text-emerald-100/80 font-medium flex flex-wrap items-center gap-3 mt-1">
+                                                    <span><i class="fa-solid fa-location-dot mr-1 text-emerald-300"></i><strong id="portal-user-subregions">Subregiones Asignadas</strong></span>
+                                                    <span>•</span>
+                                                    <span><i class="fa-solid fa-clock mr-1 text-emerald-300"></i>Último acceso: Hoy</span>
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Acciones Rápidas del Header -->
+                                        <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-start lg:justify-end">
+                                            <button type="button" id="btn-header-nueva-visita-portal"
+                                                class="portal-btn-action-primary">
+                                                <i class="fa-solid fa-camera-retro text-sm"></i>
+                                                <span>+ Registrar Visita</span>
+                                            </button>
+                                            <button type="button" id="btn-header-cambiar-pw-portal"
+                                                class="portal-btn-action-secondary">
+                                                <i class="fa-solid fa-key text-xs"></i>
+                                                <span>Cambiar Clave</span>
+                                            </button>
+                                            <button type="button" id="btn-portal-logout"
+                                                class="portal-btn-action-danger">
+                                                <i class="fa-solid fa-right-from-bracket text-xs"></i>
+                                                <span>Salir</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 2. PANEL EJECUTIVO DE KPIS PRINCIPALES (TOP 4 HERO CARDS) -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <!-- KPI 1: Convenios Asignados -->
+                                    <div class="portal-hero-kpi-card accent-emerald">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+                                                    Convenios Asignados
+                                                </span>
+                                                <h3 class="text-3xl font-black text-slate-800 mt-1.5" id="kpi-port-total">0</h3>
+                                            </div>
+                                            <div class="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
+                                                <i class="fa-solid fa-folder-tree text-base"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100 text-[11px] font-bold">
+                                            <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md"><span id="kpi-port-ejec">0</span> en ejec.</span>
+                                            <span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md"><span id="kpi-port-liq">0</span> por liq.</span>
+                                            <span class="text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md"><span id="kpi-port-fin">0</span> fin.</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- KPI 2: Avance Físico Promedio -->
+                                    <div class="portal-hero-kpi-card accent-blue">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+                                                    Avance Físico Promedio
+                                                </span>
+                                                <h3 class="text-3xl font-black text-blue-700 mt-1.5" id="kpi-port-avg-fisico">0.0%</h3>
+                                            </div>
+                                            <div class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700">
+                                                <i class="fa-solid fa-chart-line text-base"></i>
+                                            </div>
+                                        </div>
+                                        <div class="mt-4 pt-3 border-t border-slate-100">
+                                            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                                <div class="bg-blue-600 h-full transition-all duration-700" id="kpi-port-avg-bar" style="width: 0%"></div>
+                                            </div>
+                                            <p class="text-[10px] text-slate-400 font-semibold mt-1.5 flex justify-between">
+                                                <span>Promedio ponderado</span>
+                                                <span class="text-blue-700 font-bold" id="kpi-port-avg-txt">Seguimiento global</span>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- KPI 3: Visitas Técnicas -->
+                                    <div class="portal-hero-kpi-card accent-amber">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+                                                    Visitas en Terreno
+                                                </span>
+                                                <h3 class="text-3xl font-black text-amber-700 mt-1.5" id="kpi-port-visitas-total">0</h3>
+                                            </div>
+                                            <div class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
+                                                <i class="fa-solid fa-helmet-safety text-base"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100 text-[11px] font-bold">
+                                            <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md"><span id="kpi-port-visitas-realizadas">0</span> realizadas</span>
+                                            <span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md"><span id="kpi-port-visitas-programadas">0</span> programadas</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- KPI 4: Compromisos & Alertas -->
+                                    <div class="portal-hero-kpi-card accent-red">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+                                                    Alertas Contractuales
+                                                </span>
+                                                <h3 class="text-3xl font-black text-red-600 mt-1.5" id="kpi-port-venc">0</h3>
+                                            </div>
+                                            <div class="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600">
+                                                <i class="fa-solid fa-triangle-exclamation text-base"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100 text-[11px] font-bold">
+                                            <span class="text-red-700 bg-red-50 px-2 py-0.5 rounded-md"><span id="kpi-port-alertas-vencidos">0</span> vencidos / &lt;30d</span>
+                                            <span class="text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md"><span id="kpi-port-alertas-desfases">0</span> desfase &gt;15%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 3. BARRA OPERATIVA SECUNDARIA (MÉTRICAS DETALLADAS) -->
+                                <div class="portal-secondary-bar">
+                                    <div class="portal-sec-stat-item">
+                                        <div class="portal-sec-stat-icon text-emerald-700">
+                                            <i class="fa-solid fa-sack-dollar"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Inversión Administrada</p>
+                                            <p class="text-sm font-black text-slate-800" id="kpi-port-inv">$0</p>
+                                        </div>
+                                    </div>
+                                    <div class="portal-sec-stat-item">
+                                        <div class="portal-sec-stat-icon text-blue-700">
+                                            <i class="fa-solid fa-road"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Longitud Vial Ejecutada</p>
+                                            <p class="text-sm font-black text-slate-800" id="kpi-port-long">0 m</p>
+                                        </div>
+                                    </div>
+                                    <div class="portal-sec-stat-item">
+                                        <div class="portal-sec-stat-icon text-amber-700">
+                                            <i class="fa-solid fa-ruler-combined"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Área Ejecutada</p>
+                                            <p class="text-sm font-black text-slate-800" id="kpi-port-area">0 m²</p>
+                                        </div>
+                                    </div>
+                                    <div class="portal-sec-stat-item">
+                                        <div class="portal-sec-stat-icon text-slate-600">
+                                            <i class="fa-solid fa-calendar-check"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Corte de Información</p>
+                                            <p class="text-xs font-bold text-slate-600" id="kpi-port-update">Corte: Hoy</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 4. SUB-NAVEGACIÓN SEGMENTADA ELEGANTE -->
+                                <div class="portal-segmented-nav no-print">
+                                    <button class="portal-subtab-btn portal-segmented-btn active" data-subtab="dashboard">
+                                        <i class="fa-solid fa-chart-pie"></i>
+                                        <span>Resumen & Gráficos</span>
+                                    </button>
+                                    <button class="portal-subtab-btn portal-segmented-btn" data-subtab="convenios">
+                                        <i class="fa-solid fa-folder-open"></i>
+                                        <span>Mis Convenios</span>
+                                        <span class="portal-segmented-count" id="badge-count-convenios">0</span>
+                                    </button>
+                                    <button class="portal-subtab-btn portal-segmented-btn" data-subtab="visitas">
+                                        <i class="fa-solid fa-helmet-safety"></i>
+                                        <span>Bitácora de Terreno</span>
+                                        <span class="portal-segmented-count" id="badge-count-visitas">0</span>
+                                    </button>
+                                    <button class="portal-subtab-btn portal-segmented-btn" data-subtab="alertas">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                        <span>Alertas Contractuales</span>
+                                        <span class="portal-segmented-count" id="badge-count-alertas">0</span>
+                                    </button>
+                                    <button class="portal-subtab-btn portal-segmented-btn" data-subtab="historial">
+                                        <i class="fa-solid fa-clock-rotate-left"></i>
+                                        <span>Historial de Cambios</span>
+                                    </button>
+                                    <button class="portal-subtab-btn portal-segmented-btn" data-subtab="auditoria" id="btn-portal-subtab-auditoria" style="display:none;">
+                                        <i class="fa-solid fa-fingerprint text-emerald-600"></i>
+                                        <span>Bitácora de Auditoría</span>
+                                        <span class="portal-segmented-count" id="badge-count-auditoria">0</span>
+                                    </button>
+                                    <button class="portal-subtab-btn portal-segmented-btn" data-subtab="perfil">
+                                        <i class="fa-solid fa-shield-halved"></i>
+                                        <span>Mi Perfil & Seguridad</span>
+                                    </button>
+                                </div>
+
+                                <!-- ==============================================================
+                                     PANEL 1: DASHBOARD EJECUTIVO & GRÁFICOS
+                                     ============================================================== -->
+                                <div id="portal-panel-dashboard" class="portal-panel space-y-6">
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <!-- Gráfico 1: Distribución por Estado -->
+                                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                                            <div class="flex justify-between items-center mb-4">
+                                                <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                                    <i class="fa-solid fa-chart-pie text-institutional-primary"></i>
+                                                    Distribución Contractual de Mis Convenios
+                                                </h4>
+                                                <span class="text-[10px] text-slate-400 font-bold">Estado en DIAT</span>
+                                            </div>
+                                            <div style="height:260px;position:relative;">
+                                                <canvas id="chart-port-estados"></canvas>
+                                            </div>
+                                        </div>
+
+                                        <!-- Gráfico 2: Avance Físico vs Financiero -->
+                                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                                            <div class="flex justify-between items-center mb-4">
+                                                <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                                    <i class="fa-solid fa-chart-simple text-blue-600"></i>
+                                                    Avance Físico vs. Financiero (Top 10)
+                                                </h4>
+                                                <span class="text-[10px] text-slate-400 font-bold">Comparativa (%)</span>
+                                            </div>
+                                            <div style="height:260px;position:relative;">
+                                                <canvas id="chart-port-avances"></canvas>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="flex items-center gap-2">
-                                        <button type="button" id="btn-portal-logout"
-                                            class="px-4 py-2 border border-red-200 hover:bg-red-50 text-red-600 font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5">
-                                            <i class="fa-solid fa-right-from-bracket"></i>
-                                            Cerrar Sesión
-                                        </button>
-                                    </div>
                                 </div>
 
-                                <!-- Sub-navegación del Portal -->
-                                <div class="flex border-b border-slate-200 no-print overflow-x-auto gap-2">
-                                    <button class="portal-subtab-btn active" data-subtab="dashboard">Dashboard
-                                        Personal</button>
-                                    <button class="portal-subtab-btn" data-subtab="convenios">Mis Convenios</button>
-                                    <button class="portal-subtab-btn" data-subtab="alertas">Mis Alertas</button>
-                                    <button class="portal-subtab-btn" data-subtab="visitas">Visitas Técnicas</button>
-                                    <button class="portal-subtab-btn" data-subtab="historial">Historial de
-                                        Cambios</button>
-                                </div>
-
-                                <!-- SUB-PESTAÑA 1: DASHBOARD PERSONAL -->
-                                <div id="portal-panel-dashboard" class="portal-panel space-y-6">
-                                    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4">
-                                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                Convenios Asignados</p>
-                                            <h3 class="text-2xl font-black text-slate-800 mt-2" id="kpi-port-total">0
-                                            </h3>
+                                <!-- ==============================================================
+                                     PANEL 2: MIS CONVENIOS (CATÁLOGO DINÁMICO & INTERACTIVO)
+                                     ============================================================== -->
+                                <div id="portal-panel-convenios" class="portal-panel hidden space-y-5">
+                                    <!-- Toolbar de Búsqueda y Filtros Rápidos -->
+                                    <div class="portal-toolbar">
+                                        <div class="portal-search-box">
+                                            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                                            <input type="text" id="portal-convenios-search"
+                                                class="portal-search-input"
+                                                placeholder="Buscar por N° de convenio, municipio u objeto..." />
                                         </div>
-                                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">En
-                                                Ejecución</p>
-                                            <h3 class="text-2xl font-black text-emerald-600 mt-2" id="kpi-port-ejec">0
-                                            </h3>
-                                        </div>
-                                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                Por Liquidar</p>
-                                            <h3 class="text-2xl font-black text-amber-500 mt-2" id="kpi-port-liq">0</h3>
-                                        </div>
-                                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                Finalizados</p>
-                                            <h3 class="text-2xl font-black text-blue-600 mt-2" id="kpi-port-fin">0</h3>
-                                        </div>
-                                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                Inversión Administrada</p>
-                                            <h3 class="text-xl font-black text-slate-800 mt-2" id="kpi-port-inv">$0</h3>
-                                        </div>
-                                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                Longitud Ejecutada</p>
-                                            <h3 class="text-xl font-black text-slate-800 mt-2" id="kpi-port-long">0 m
-                                            </h3>
-                                        </div>
-                                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                Próximos Vencimientos</p>
-                                            <h3 class="text-xl font-black text-red-500 mt-2" id="kpi-port-venc">0</h3>
-                                        </div>
-                                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                Última Actualización</p>
-                                            <h3 class="text-sm font-bold text-slate-600 mt-3" id="kpi-port-update">
-                                                Corte: --</h3>
+                                        <div class="portal-filter-chips">
+                                            <button type="button" class="portal-filter-chip active" data-filter="all">Todos</button>
+                                            <button type="button" class="portal-filter-chip" data-filter="ejecucion">En Ejecución</button>
+                                            <button type="button" class="portal-filter-chip" data-filter="liquidar">Por Liquidar</button>
+                                            <button type="button" class="portal-filter-chip" data-filter="finalizado">Finalizados</button>
+                                            <button type="button" class="portal-filter-chip" data-filter="alerta">Con Alertas</button>
                                         </div>
                                     </div>
 
-                                    <!-- Gráficos de Gestión del Supervisor -->
-                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                                        <div
-                                            class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-                                            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">
-                                                <i
-                                                    class="fa-solid fa-chart-pie text-institutional-primary mr-1"></i>Distribución
-                                                por Estado Contractual</h4>
-                                            <div style="height:250px;position:relative;"><canvas
-                                                    id="chart-port-estados"></canvas></div>
-                                        </div>
-                                        <div
-                                            class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-                                            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">
-                                                <i class="fa-solid fa-chart-bar text-blue-600 mr-1"></i>Avance Físico
-                                                vs. Financiero por Convenio</h4>
-                                            <div style="height:250px;position:relative;"><canvas
-                                                    id="chart-port-avances"></canvas></div>
-                                        </div>
+                                    <!-- Grid Dinámico de Convenios -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" id="portal-convenios-grid">
+                                        <!-- Tarjetas enriquecidas generadas dinámicamente -->
                                     </div>
                                 </div>
 
-                                <!-- SUB-PESTAÑA 2: MIS CONVENIOS -->
-                                <div id="portal-panel-convenios" class="portal-panel hidden space-y-6">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
-                                        id="portal-convenios-grid">
-                                        <!-- Tarjetas generadas dinámicamente -->
-                                    </div>
-                                </div>
-
-                                <!-- SUB-PESTAÑA 3: MIS ALERTAS -->
-                                <div id="portal-panel-alertas" class="portal-panel hidden space-y-6">
-                                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4"><i
-                                                class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i>Alertas
-                                            de Convenios Asignados</h3>
-                                        <div class="space-y-3" id="portal-alertas-list">
-                                            <!-- Alertas generadas dinámicamente -->
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- SUB-PESTAÑA 4: VISITAS TÉCNICAS -->
+                                <!-- ==============================================================
+                                     PANEL 3: BITÁCORA DE VISITAS TÉCNICAS EN TERRENO
+                                     ============================================================== -->
                                 <div id="portal-panel-visitas" class="portal-panel hidden space-y-6">
-                                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                        <div class="flex justify-between items-center mb-4">
-                                            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider"><i
-                                                    class="fa-solid fa-helmet-safety text-institutional-primary mr-1"></i>Registro
-                                                Histórico de Visitas Técnicas</h3>
+                                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                                            <div>
+                                                <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                                    <i class="fa-solid fa-clipboard-list text-institutional-primary text-base"></i>
+                                                    Bitácora Histórica de Visitas Técnicas
+                                                </h3>
+                                                <p class="text-xs text-slate-400 font-medium mt-0.5">
+                                                    Registro cronológico de inspecciones en obra, evidencias fotográficas y compromisos de terreno
+                                                </p>
+                                            </div>
                                             <button type="button" id="btn-registrar-visita-portal"
-                                                class="px-3 py-1.5 bg-institutional-primary hover:bg-institutional-light text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all">
-                                                <i class="fa-solid fa-plus mr-1"></i>Registrar Visita
+                                                class="px-4 py-2.5 bg-institutional-primary hover:bg-institutional-light text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm">
+                                                <i class="fa-solid fa-plus"></i>
+                                                <span>Nueva Visita Técnica</span>
                                             </button>
                                         </div>
-                                        <div class="overflow-x-auto">
-                                            <table class="w-full text-left border-collapse" style="font-size:11px;">
+                                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                                            <table class="w-full text-left border-collapse" style="font-size:11.5px;">
                                                 <thead>
-                                                    <tr class="bg-slate-50 text-slate-400 uppercase tracking-wider"
+                                                    <tr class="bg-slate-50 text-slate-500 font-extrabold uppercase tracking-wider"
                                                         style="border-bottom:1.5px solid #E2E8F0;">
-                                                        <th class="p-3">Convenio</th>
-                                                        <th class="p-3">Fecha</th>
-                                                        <th class="p-3">Tipo</th>
-                                                        <th class="p-3">Observaciones</th>
-                                                        <th class="p-3">Compromisos</th>
-                                                        <th class="p-3">Riesgos</th>
-                                                        <th class="p-3">Fotos</th>
+                                                        <th class="p-3.5">Convenio / Municipio</th>
+                                                        <th class="p-3.5 text-center">Fecha & Estado</th>
+                                                        <th class="p-3.5 text-center">Tipo de Inspección</th>
+                                                        <th class="p-3.5">Observaciones Técnicas</th>
+                                                        <th class="p-3.5">Compromisos Adquiridos</th>
+                                                        <th class="p-3.5 text-center">Fotos</th>
+                                                        <th class="p-3.5 text-center">Acciones</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody id="portal-visitas-table-body"
-                                                    class="text-slate-600 text-center">
-                                                    <!-- Visitas generadas dinámicamente -->
+                                                <tbody id="portal-visitas-table-body" class="text-slate-600 divide-y divide-slate-100">
+                                                    <!-- Visitas renderizadas dinámicamente -->
                                                 </tbody>
                                             </table>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- SUB-PESTAÑA 5: HISTORIAL DE CAMBIOS -->
+                                <!-- ==============================================================
+                                     PANEL 4: COMPROMISOS & ALERTAS CONTRACTUALES
+                                     ============================================================== -->
+                                <div id="portal-panel-alertas" class="portal-panel hidden space-y-6">
+                                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                        <div class="flex justify-between items-center mb-5 pb-4 border-b border-slate-100">
+                                            <div>
+                                                <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                                    <i class="fa-solid fa-triangle-exclamation text-amber-500 text-base"></i>
+                                                    Alertas Contractuales y Compromisos Pendientes
+                                                </h3>
+                                                <p class="text-xs text-slate-400 font-medium mt-0.5">
+                                                    Convenios que requieren atención prioritaria, prórrogas o revisión de desbalance financiero
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-3" id="portal-alertas-list">
+                                            <!-- Alertas generadas dinámicamente -->
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ==============================================================
+                                     PANEL 5: HISTORIAL DE MODIFICACIONES (AUDITORÍA)
+                                     ============================================================== -->
                                 <div id="portal-panel-historial" class="portal-panel hidden space-y-6">
-                                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4"><i
-                                                class="fa-solid fa-history text-slate-500 mr-1"></i>Bitácora de
-                                            Modificaciones</h3>
-                                        <div class="overflow-x-auto">
-                                            <table class="w-full text-left border-collapse" style="font-size:11px;">
+                                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                        <div class="mb-5 pb-4 border-b border-slate-100">
+                                            <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                                <i class="fa-solid fa-clock-rotate-left text-slate-500 text-base"></i>
+                                                Bitácora de Modificaciones y Auditoría
+                                            </h3>
+                                            <p class="text-xs text-slate-400 font-medium mt-0.5">
+                                                Registro de cambios realizados sobre los convenios asignados a tu usuario
+                                            </p>
+                                        </div>
+                                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                                            <table class="w-full text-left border-collapse" style="font-size:11.5px;">
                                                 <thead>
-                                                    <tr class="bg-slate-50 text-slate-400 uppercase tracking-wider"
+                                                    <tr class="bg-slate-50 text-slate-500 font-extrabold uppercase tracking-wider"
                                                         style="border-bottom:1.5px solid #E2E8F0;">
-                                                        <th class="p-3">Fecha/Hora</th>
-                                                        <th class="p-3">Usuario</th>
-                                                        <th class="p-3">Convenio</th>
-                                                        <th class="p-3">Campo</th>
-                                                        <th class="p-3 text-red-600">Valor Anterior</th>
-                                                        <th class="p-3 text-emerald-600">Valor Nuevo</th>
+                                                        <th class="p-3.5">Fecha / Hora</th>
+                                                        <th class="p-3.5">Usuario</th>
+                                                        <th class="p-3.5">Convenio</th>
+                                                        <th class="p-3.5">Campo Modificado</th>
+                                                        <th class="p-3.5 text-red-600">Valor Previo</th>
+                                                        <th class="p-3.5 text-emerald-700 font-black">Valor Actualizado</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody id="portal-historial-table-body" class="text-slate-600">
+                                                <tbody id="portal-historial-table-body" class="text-slate-600 divide-y divide-slate-100">
                                                     <!-- Cambios generados dinámicamente -->
                                                 </tbody>
                                             </table>
@@ -2321,6 +2513,198 @@
                                     </div>
                                 </div>
 
+                                <!-- ==============================================================
+                                     PANEL 6: MI PERFIL Y SEGURIDAD INSTITUCIONAL
+                                     ============================================================== -->
+                                <div id="portal-panel-perfil" class="portal-panel hidden space-y-6">
+                                    <div class="portal-profile-grid">
+                                        <!-- Datos Oficiales del Supervisor -->
+                                        <div class="portal-security-box flex flex-col justify-between">
+                                            <div>
+                                                <div class="flex items-center gap-3 mb-5 pb-4 border-b border-slate-100">
+                                                    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-institutional-primary flex items-center justify-center text-xl font-bold border border-emerald-200">
+                                                        <i class="fa-solid fa-user-check"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h3 class="text-base font-black text-slate-800">Ficha del Supervisor</h3>
+                                                        <p class="text-xs text-slate-400 font-medium">Información institucional registrada</p>
+                                                    </div>
+                                                </div>
+                                                <div class="space-y-4">
+                                                    <div>
+                                                        <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Nombre Completo</span>
+                                                        <p class="text-sm font-black text-slate-800" id="portal-profile-fullname">Jonathan Marín Gallego</p>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Usuario Corto de Ingreso</span>
+                                                        <p class="text-sm font-black text-emerald-800 font-mono flex items-center gap-2">
+                                                            <span id="portal-profile-username-val">JMARINGA</span>
+                                                            <span class="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full uppercase tracking-normal">Único para Ingreso</span>
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Dependencia</span>
+                                                        <p class="text-sm font-bold text-slate-700">Dirección de Información y Apoyo Técnico (DIAT)</p>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Entidad</span>
+                                                        <p class="text-sm font-bold text-slate-700">Secretaría de Infraestructura Física — Gobernación de Antioquia</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                                                <span>Estado: <strong class="text-emerald-700 font-bold">Activo</strong></span>
+                                                <span class="text-slate-400">Convenios asignados: <strong class="text-slate-700" id="portal-profile-conv-count">0</strong></span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Seguridad y Actualización de Contraseña Directa -->
+                                        <div class="portal-security-box">
+                                            <div class="flex items-center gap-3 mb-5 pb-4 border-b border-slate-100">
+                                                <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold border border-amber-200">
+                                                    <i class="fa-solid fa-shield-halved"></i>
+                                                </div>
+                                                <div>
+                                                    <h3 class="text-base font-black text-slate-800">Seguridad & Contraseña</h3>
+                                                    <p class="text-xs text-slate-400 font-medium">Actualiza tu clave de acceso en cualquier momento</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 mb-5 flex items-start gap-3">
+                                                <i class="fa-solid fa-circle-check text-emerald-600 mt-0.5 text-sm"></i>
+                                                <div class="text-xs text-emerald-900 leading-relaxed">
+                                                    <p class="font-bold mb-0.5">Credencial Segura & Personalizada</p>
+                                                    <p class="text-emerald-700">Tu contraseña se guarda cifrada y permanecerá activa para tus futuras sesiones en este navegador y plataforma.</p>
+                                                </div>
+                                            </div>
+
+                                            <form id="portal-direct-password-form" class="space-y-4">
+                                                <div>
+                                                    <label class="block text-xs font-bold text-slate-700 mb-1">
+                                                        Nueva Contraseña <span class="text-slate-400 font-normal">(mínimo 8 caracteres)</span>
+                                                    </label>
+                                                    <div class="relative">
+                                                        <input type="password" id="portal-direct-new-pw"
+                                                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-institutional-primary focus:ring-2 focus:ring-institutional-primary/10 transition-all pr-10"
+                                                            placeholder="Escribe tu nueva contraseña..." required minlength="8" />
+                                                        <button type="button" class="btn-toggle-pw absolute right-3 top-2.5 text-slate-400 hover:text-slate-600" data-target="portal-direct-new-pw">
+                                                            <i class="fa-solid fa-eye text-[12px]"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label class="block text-xs font-bold text-slate-700 mb-1">
+                                                        Confirmar Nueva Contraseña
+                                                    </label>
+                                                    <div class="relative">
+                                                        <input type="password" id="portal-direct-confirm-pw"
+                                                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-institutional-primary focus:ring-2 focus:ring-institutional-primary/10 transition-all pr-10"
+                                                            placeholder="Vuelve a escribir la nueva contraseña..." required minlength="8" />
+                                                        <button type="button" class="btn-toggle-pw absolute right-3 top-2.5 text-slate-400 hover:text-slate-600" data-target="portal-direct-confirm-pw">
+                                                            <i class="fa-solid fa-eye text-[12px]"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Indicador de Coincidencia en Vivo -->
+                                                <div id="portal-direct-match-indicator" class="text-xs font-semibold hidden"></div>
+
+                                                <div id="portal-direct-error" class="hidden p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+                                                    <i class="fa-solid fa-circle-exclamation text-red-500"></i>
+                                                    <span id="portal-direct-error-text"></span>
+                                                </div>
+
+                                                <button type="submit" id="btn-portal-direct-pw-submit"
+                                                    class="w-full py-3 bg-institutional-primary hover:bg-institutional-light text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
+                                                    <i class="fa-solid fa-key"></i>
+                                                    <span>Actualizar Contraseña Ahora</span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- ==============================================================
+                                 PANEL 7: BITÁCORA DE AUDITORÍA EN TIEMPO REAL (SUPABASE CLOUD)
+                                 ============================================================== -->
+                            <div id="portal-panel-auditoria" class="portal-panel hidden space-y-6">
+                                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 text-lg shadow-sm">
+                                                <i class="fa-solid fa-fingerprint"></i>
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center gap-2">
+                                                    <h3 class="text-base font-black text-slate-800">Bitácora de Auditoría Institucional</h3>
+                                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                        Supabase Cloud
+                                                    </span>
+                                                </div>
+                                                <p class="text-xs text-slate-400 font-medium">Registro inmutable de trazabilidad y control de cambios de supervisores DIAT</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <button type="button" id="btn-export-audit-csv" onclick="if(typeof exportAuditLogsToCSV === 'function') exportAuditLogsToCSV();"
+                                                class="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition shadow-sm hover:shadow flex items-center gap-1.5"
+                                                title="Descargar historial de auditoría para Excel en formato CSV">
+                                                <i class="fa-solid fa-file-excel"></i>
+                                                <span>Exportar CSV</span>
+                                            </button>
+                                            <button type="button" id="btn-refresh-audit" onclick="if(typeof renderAuditoriaTab === 'function') renderAuditoriaTab();"
+                                                class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                                                <i class="fa-solid fa-rotate"></i>
+                                                <span>Actualizar</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Filtros Rápidos de Auditoría -->
+                                    <div class="flex flex-wrap items-center gap-3 py-4">
+                                        <div class="relative flex-1 min-w-[200px]">
+                                            <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                                            <input type="text" id="audit-filter-search" oninput="if(typeof filterAuditLogs === 'function') filterAuditLogs();"
+                                                placeholder="Buscar por supervisor, convenio o evento..."
+                                                class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-institutional-primary focus:ring-1 focus:ring-institutional-primary transition">
+                                        </div>
+                                        <select id="audit-filter-type" onchange="if(typeof filterAuditLogs === 'function') filterAuditLogs();"
+                                            class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:bg-white">
+                                            <option value="TODOS">Todos los Eventos</option>
+                                            <option value="INICIO_SESION">Inicios de Sesión</option>
+                                            <option value="ACTUALIZACION_CONVENIO">Cambios en Convenios</option>
+                                            <option value="CAMBIO_PASSWORD">Cambios de Contraseña</option>
+                                            <option value="REGISTRO_VISITA">Visitas Radicadas</option>
+                                            <option value="ELIMINACION_VISITA">Visitas Eliminadas</option>
+                                            <option value="LOGIN_FALLIDO">Intentos Fallidos</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Contenedor de la Tabla de Auditoría -->
+                                    <div class="overflow-x-auto rounded-xl border border-slate-100">
+                                        <table class="w-full text-left border-collapse text-xs">
+                                            <thead>
+                                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-extrabold uppercase text-[10px] tracking-wider">
+                                                    <th class="p-3">Fecha y Hora</th>
+                                                    <th class="p-3">Supervisor</th>
+                                                    <th class="p-3">Tipo de Evento</th>
+                                                    <th class="p-3">Convenio</th>
+                                                    <th class="p-3">Detalle / Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="audit-table-body" class="divide-y divide-slate-100 font-medium text-slate-700">
+                                                <tr>
+                                                    <td colspan="5" class="p-6 text-center text-slate-400">
+                                                        <i class="fa-solid fa-spinner fa-spin mr-2"></i>Cargando registros de auditoría desde Supabase...
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
 
                         </div>
@@ -3558,72 +3942,317 @@
     </div>
 
     <!-- MODAL DE INICIAR SESIÓN (EXPERIMENTAL Y VISUAL) -->
+    <!-- MODAL DE INICIAR SESIÓN (PORTAL DEL SUPERVISOR) -->
     <div id="modal-login" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm"
-        style="background: rgba(15, 23, 42, 0.4); z-index: 100;">
-        <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden"
-            style="border: 1.5px solid #E2E8F0; box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15); animation: modal-fade-in 0.3s ease;">
+        style="background: rgba(6, 30, 20, 0.65); z-index: 100;" role="dialog" aria-modal="true" aria-labelledby="login-title">
+        <div class="login-modal-card">
 
-            <!-- Header con Logo de Antioquia o banner de color -->
-            <div
-                style="background: linear-gradient(135deg, #0B5640, #018D38); padding: 24px 20px; text-align: center; position: relative;">
-                <button type="button" id="btn-close-login"
-                    style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 14px; cursor: pointer; transition: color 0.2s;"
-                    onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">
+            <!-- Header Institucional -->
+            <div class="login-modal-header">
+                <button type="button" id="btn-close-login" title="Cerrar ventana" onclick="window.closeLoginModal(event)"
+                    style="position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #ffffff; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;"
+                    onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
-                <div
-                    style="width: 44px; height: 44px; border-radius: 99px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; border: 1.5px solid rgba(255,255,255,0.4);">
-                    <i class="fa-solid fa-lock text-white" style="font-size: 16px; color: white;"></i>
+                <div style="width: 48px; height: 48px; border-radius: 16px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; border: 1.5px solid rgba(255,255,255,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                    <i class="fa-solid fa-user-shield text-white text-xl"></i>
                 </div>
-                <h3
-                    style="font-size: 13px; font-weight: 800; color: white; text-transform: uppercase; letter-spacing: 0.08em; margin: 0;">
-                    Gobernación de Antioquia</h3>
-                <p style="font-size: 10px; color: rgba(255,255,255,0.85); font-weight: 500; margin: 2px 0 0;">Acceso
-                    Interno a Convenios DIAT</p>
+                <h3 id="login-title" style="font-size: 13.5px; font-weight: 800; color: #ffffff; text-transform: uppercase; letter-spacing: 0.08em; margin: 0;">
+                    Portal de Supervisión DIAT
+                </h3>
+                <p style="font-size: 10.5px; color: rgba(255,255,255,0.85); font-weight: 500; margin: 3px 0 0;">
+                    Secretaría de Infraestructura Física • Antioquia
+                </p>
             </div>
 
             <!-- Formulario de login -->
-            <form id="login-form" style="padding: 24px 20px; margin: 0;" onsubmit="event.preventDefault();">
-                <div style="margin-bottom: 16px;">
-                    <label
-                        style="display: block; font-size: 9.5px; font-weight: 800; color: #0B5640; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Usuario
-                        / Correo</label>
-                    <div style="position: relative; display: flex; align-items: center;">
-                        <i class="fa-solid fa-user"
-                            style="position: absolute; left: 12px; color: #94A3B8; font-size: 11px;"></i>
-                        <input type="text" id="login-username" placeholder="ejemplo@antioquia.gov.co"
-                            style="width: 100%; font-size: 11.5px; padding: 10px 12px 10px 32px; border: 1.5px solid #E2E8F0; border-radius: 10px; font-weight: 500; color: #0F172A; transition: border-color 0.2s; outline: none;"
-                            onfocus="this.style.borderColor='#0B5640'" onblur="this.style.borderColor='#E2E8F0'">
+            <form id="login-form" class="login-modal-body" onsubmit="event.preventDefault();">
+                <!-- Alerta de Error en Vivo -->
+                <div id="login-error-alert" class="hidden mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2.5">
+                    <i class="fa-solid fa-circle-exclamation text-red-500 mt-0.5 shrink-0"></i>
+                    <span id="login-error-text" class="font-medium leading-relaxed"></span>
+                </div>
+
+                <!-- Campo Usuario Corto -->
+                <div class="login-input-group">
+                    <label for="login-username">
+                        <span>Usuario Corto Asignado</span>
+                        <span class="text-[9.5px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full normal-case">Sin correo institucional</span>
+                    </label>
+                    <div class="login-input-wrap">
+                        <i class="fa-solid fa-id-badge login-input-icon"></i>
+                        <input type="text" id="login-username" class="login-input-field input-username" placeholder="Ej: JMARINGA, CQUIRAMAH, ADMIN"
+                            autocomplete="username" autocapitalize="characters" required>
+                    </div>
+                    <!-- Chips sugeridos para agilizar ingreso -->
+                    <div class="flex items-center gap-1.5 mt-2 flex-wrap text-[10.5px] text-slate-400">
+                        <span class="font-bold text-slate-500">Ejemplos:</span>
+                        <button type="button" class="login-quick-chip" onclick="document.getElementById('login-username').value='JMARINGA'; document.getElementById('login-password').focus();">JMARINGA</button>
+                        <button type="button" class="login-quick-chip" onclick="document.getElementById('login-username').value='ADMIN'; document.getElementById('login-password').focus();">ADMIN</button>
                     </div>
                 </div>
 
-                <div style="margin-bottom: 20px;">
-                    <label
-                        style="display: block; font-size: 9.5px; font-weight: 800; color: #0B5640; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Contraseña</label>
-                    <div style="position: relative; display: flex; align-items: center;">
-                        <i class="fa-solid fa-key"
-                            style="position: absolute; left: 12px; color: #94A3B8; font-size: 11px;"></i>
-                        <input type="password" id="login-password" placeholder="••••••••"
-                            style="width: 100%; font-size: 11.5px; padding: 10px 12px 10px 32px; border: 1.5px solid #E2E8F0; border-radius: 10px; font-weight: 500; color: #0F172A; transition: border-color 0.2s; outline: none;"
-                            onfocus="this.style.borderColor='#0B5640'" onblur="this.style.borderColor='#E2E8F0'">
+                <!-- Campo Contraseña -->
+                <div class="login-input-group">
+                    <label for="login-password">
+                        <span>Contraseña</span>
+                    </label>
+                    <div class="login-input-wrap">
+                        <i class="fa-solid fa-lock login-input-icon"></i>
+                        <input type="password" id="login-password" class="login-input-field" placeholder="••••••••"
+                            autocomplete="current-password" required>
+                        <button type="button" class="btn-toggle-pw login-toggle-pw" data-target="login-password" title="Ver / Ocultar contraseña">
+                            <i class="fa-solid fa-eye text-xs"></i>
+                        </button>
                     </div>
                 </div>
 
-                <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="login-remember"
-                        style="cursor: pointer; width: 14px; height: 14px; accent-color: #0B5640;">
-                    <label for="login-remember"
-                        style="font-size: 11px; font-weight: 600; color: #475569; cursor: pointer; user-select: none;">Mantener
-                        sesión iniciada</label>
+                <!-- Opciones de Sesión -->
+                <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="login-remember" style="cursor: pointer; width: 14px; height: 14px; accent-color: #0B5640;" checked>
+                        <span style="font-size: 11px; font-weight: 600; color: #475569;">Recordar mi sesión</span>
+                    </label>
+                    <span style="font-size: 9.5px; color: #94A3B8; font-weight: 600;">Acceso Seguro DIAT</span>
                 </div>
 
-                <button type="submit" id="btn-login-submit"
-                    style="width: 100%; background: linear-gradient(135deg, #0B5640, #018D38); color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(11, 86, 64, 0.2);"
-                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(11, 86, 64, 0.3)';"
-                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(11, 86, 64, 0.2)';">
+                <!-- Botón de Ingreso -->
+                <button type="submit" id="btn-login-submit" class="login-submit-btn">
                     <i class="fa-solid fa-right-to-bracket"></i>
-                    Ingresar
+                    <span>Iniciar Sesión en el Portal</span>
                 </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE AUTORIZACIÓN DE ADMINISTRADOR (CONTROL DE VISITAS) -->
+    <div id="modal-admin-auth" class="fixed inset-0 z-[120] hidden flex items-center justify-center p-4 backdrop-blur-sm"
+        style="background: rgba(15, 23, 42, 0.6); z-index: 120;">
+        <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+            style="border: 1.5px solid #E2E8F0; animation: modal-fade-in 0.3s ease;">
+            
+            <!-- Header con banner institucional -->
+            <div style="background: linear-gradient(135deg, #0B5640, #018D38); padding: 22px 20px; text-align: center; position: relative;">
+                <button type="button" id="btn-close-admin-auth"
+                    style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 15px; cursor: pointer; transition: color 0.2s;"
+                    onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div style="width: 46px; height: 46px; border-radius: 99px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; border: 1.5px solid rgba(255,255,255,0.4);">
+                    <i class="fa-solid fa-sliders text-white" style="font-size: 18px; color: white;"></i>
+                </div>
+                <h3 style="font-size: 13.5px; font-weight: 800; color: white; text-transform: uppercase; letter-spacing: 0.07em; margin: 0;">
+                    Control de Visitas
+                </h3>
+                <p style="font-size: 10.5px; color: rgba(255,255,255,0.9); font-weight: 500; margin: 3px 0 0;">
+                    Acceso Exclusivo de Administrador
+                </p>
+            </div>
+
+            <!-- Formulario de acceso admin -->
+            <form id="admin-auth-form" style="padding: 22px 20px 24px; margin: 0;" onsubmit="event.preventDefault();">
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 9.5px; font-weight: 800; color: #0B5640; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+                        Usuario Administrador
+                    </label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <i class="fa-solid fa-user-shield" style="position: absolute; left: 12px; color: #94A3B8; font-size: 11px;"></i>
+                        <input type="text" id="admin-auth-user" placeholder="ADMIN" required autocomplete="username"
+                            style="width: 100%; font-size: 11.5px; padding: 10px 12px 10px 32px; border: 1.5px solid #E2E8F0; border-radius: 10px; font-weight: 600; color: #0F172A; transition: border-color 0.2s; outline: none;"
+                            onfocus="this.style.borderColor='#0B5640'" onblur="this.style.borderColor='#E2E8F0'">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 9.5px; font-weight: 800; color: #0B5640; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+                        Contraseña
+                    </label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <i class="fa-solid fa-key" style="position: absolute; left: 12px; color: #94A3B8; font-size: 11px;"></i>
+                        <input type="password" id="admin-auth-password" placeholder="••••••••••••" required autocomplete="current-password"
+                            style="width: 100%; font-size: 11.5px; padding: 10px 38px 10px 32px; border: 1.5px solid #E2E8F0; border-radius: 10px; font-weight: 500; color: #0F172A; transition: border-color 0.2s; outline: none;"
+                            onfocus="this.style.borderColor='#0B5640'" onblur="this.style.borderColor='#E2E8F0'">
+                        <button type="button" class="btn-toggle-pw" data-target="admin-auth-password"
+                            style="position: absolute; right: 10px; background: transparent; border: none; color: #94A3B8; cursor: pointer; padding: 4px;">
+                            <i class="fa-solid fa-eye text-[12px]"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mensaje de error dinámico -->
+                <div id="admin-auth-error" class="hidden mb-4 p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-[11px] font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation text-red-500"></i>
+                    <span id="admin-auth-error-text">Usuario o contraseña incorrectos.</span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button type="button" id="btn-cancel-admin-auth"
+                        style="flex: 1; padding: 11px 14px; border: 1.5px solid #E2E8F0; background: white; border-radius: 10px; font-size: 11px; font-weight: 700; color: #64748B; cursor: pointer; transition: all 0.2s;">
+                        Cancelar
+                    </button>
+                    <button type="submit" id="btn-submit-admin-auth"
+                        style="flex: 2; background: linear-gradient(135deg, #0B5640, #018D38); color: white; border: none; padding: 11px 16px; border-radius: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(11, 86, 64, 0.2);">
+                        <i class="fa-solid fa-lock-open mr-1"></i> Autorizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE CAMBIO OBLIGATORIO DE CONTRASEÑA (PRIMER INGRESO FASE 2) -->
+    <div id="modal-force-password-change" class="fixed inset-0 z-[110] hidden flex items-center justify-center p-4 backdrop-blur-md"
+        style="background: rgba(15, 23, 42, 0.6); z-index: 110;">
+        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl"
+            style="border: 1.5px solid #E2E8F0; animation: modal-fade-in 0.3s ease;">
+            
+            <!-- Banner institucional de seguridad -->
+            <div style="background: linear-gradient(135deg, #0B5640, #018D38); padding: 24px 20px; text-align: center; position: relative;">
+                <div style="width: 48px; height: 48px; border-radius: 99px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; border: 1.5px solid rgba(255,255,255,0.4);">
+                    <i class="fa-solid fa-shield-halved text-white" style="font-size: 20px; color: white;"></i>
+                </div>
+                <h3 style="font-size: 14px; font-weight: 800; color: white; text-transform: uppercase; letter-spacing: 0.08em; margin: 0;">
+                    Seguridad de Acceso DIAT</h3>
+                <p style="font-size: 11px; color: rgba(255,255,255,0.9); font-weight: 500; margin: 3px 0 0;">
+                    Actualización Obligatoria de Primer Ingreso
+                </p>
+            </div>
+
+            <!-- Contenido y Formulario -->
+            <div style="padding: 24px 22px;">
+                <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 10px; padding: 12px 14px; margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-start;">
+                    <i class="fa-solid fa-circle-info text-emerald-600 mt-0.5" style="font-size: 13px;"></i>
+                    <p style="font-size: 11px; color: #166534; font-weight: 500; margin: 0; line-height: 1.4;">
+                        Has ingresado con una contraseña provisional. Por directriz de seguridad de la Gobernación de Antioquia, debes establecer tu contraseña personal antes de continuar.
+                    </p>
+                </div>
+
+                <form id="force-password-form" onsubmit="event.preventDefault();">
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; font-size: 9.5px; font-weight: 800; color: #0B5640; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+                            Nueva Contraseña
+                        </label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <i class="fa-solid fa-lock" style="position: absolute; left: 12px; color: #94A3B8; font-size: 11px;"></i>
+                            <input type="password" id="force-new-password" placeholder="Mínimo 8 caracteres" required
+                                style="width: 100%; font-size: 11.5px; padding: 10px 38px 10px 32px; border: 1.5px solid #E2E8F0; border-radius: 10px; font-weight: 500; color: #0F172A; transition: border-color 0.2s; outline: none;"
+                                onfocus="this.style.borderColor='#0B5640'" onblur="this.style.borderColor='#E2E8F0'">
+                            <button type="button" class="btn-toggle-pw" data-target="force-new-password"
+                                style="position: absolute; right: 10px; background: transparent; border: none; color: #94A3B8; cursor: pointer; padding: 4px;">
+                                <i class="fa-solid fa-eye text-[12px]"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 18px;">
+                        <label style="display: block; font-size: 9.5px; font-weight: 800; color: #0B5640; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+                            Confirmar Nueva Contraseña
+                        </label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <i class="fa-solid fa-shield-check" style="position: absolute; left: 12px; color: #94A3B8; font-size: 11px;"></i>
+                            <input type="password" id="force-confirm-password" placeholder="Repite la contraseña" required
+                                style="width: 100%; font-size: 11.5px; padding: 10px 38px 10px 32px; border: 1.5px solid #E2E8F0; border-radius: 10px; font-weight: 500; color: #0F172A; transition: border-color 0.2s; outline: none;"
+                                onfocus="this.style.borderColor='#0B5640'" onblur="this.style.borderColor='#E2E8F0'">
+                            <button type="button" class="btn-toggle-pw" data-target="force-confirm-password"
+                                style="position: absolute; right: 10px; background: transparent; border: none; color: #94A3B8; cursor: pointer; padding: 4px;">
+                                <i class="fa-solid fa-eye text-[12px]"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Indicador visual de coincidencia en tiempo real -->
+                    <div id="force-password-match-indicator" class="hidden mb-3 text-[11px] font-bold"></div>
+
+                    <!-- Mensaje de error dinámico -->
+                    <div id="force-password-error" class="hidden mb-4 p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-[11px] font-semibold flex items-center gap-2">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span id="force-password-error-text">Las contraseñas no coinciden.</span>
+                    </div>
+
+                    <button type="submit" id="btn-force-password-submit"
+                        style="width: 100%; background: linear-gradient(135deg, #0B5640, #018D38); color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(11, 86, 64, 0.2);">
+                        <i class="fa-solid fa-check mr-1.5"></i>
+                        Guardar Contraseña y Continuar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CAMBIO VOLUNTARIO DE CONTRASEÑA (DESDE MI PERFIL) -->
+    <div id="modal-change-password" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm"
+        style="background: rgba(15, 23, 42, 0.5); z-index: 100;">
+        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl"
+            style="border: 1.5px solid #E2E8F0; animation: modal-fade-in 0.3s ease;">
+            
+            <div style="background: linear-gradient(135deg, #0B5640, #018D38); padding: 20px; position: relative;">
+                <button type="button" id="btn-close-change-password"
+                    style="position: absolute; top: 14px; right: 14px; background: transparent; border: none; color: rgba(255,255,255,0.8); font-size: 15px; cursor: pointer;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="flex items-center gap-3">
+                    <div style="width: 38px; height: 38px; border-radius: 99px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; border: 1.5px solid rgba(255,255,255,0.4);">
+                        <i class="fa-solid fa-key text-white" style="font-size: 15px;"></i>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 13px; font-weight: 800; color: white; text-transform: uppercase; letter-spacing: 0.06em; margin: 0;">
+                            Cambiar Contraseña
+                        </h3>
+                        <p style="font-size: 10.5px; color: rgba(255,255,255,0.85); margin: 2px 0 0;">
+                            Actualiza tus credenciales de acceso al Portal DIAT
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <form id="change-password-form" style="padding: 22px 20px;" onsubmit="event.preventDefault();">
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 9.5px; font-weight: 800; color: #0B5640; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">
+                        Nueva Contraseña
+                    </label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <i class="fa-solid fa-lock" style="position: absolute; left: 12px; color: #94A3B8; font-size: 11px;"></i>
+                        <input type="password" id="change-new-password" placeholder="Mínimo 8 caracteres" required
+                            style="width: 100%; font-size: 11.5px; padding: 9px 38px 9px 32px; border: 1.5px solid #E2E8F0; border-radius: 10px; font-weight: 500; outline: none;"
+                            onfocus="this.style.borderColor='#0B5640'" onblur="this.style.borderColor='#E2E8F0'">
+                        <button type="button" class="btn-toggle-pw" data-target="change-new-password"
+                            style="position: absolute; right: 10px; background: transparent; border: none; color: #94A3B8; cursor: pointer; padding: 4px;">
+                            <i class="fa-solid fa-eye text-[12px]"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 18px;">
+                    <label style="display: block; font-size: 9.5px; font-weight: 800; color: #0B5640; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">
+                        Confirmar Contraseña
+                    </label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <i class="fa-solid fa-shield-check" style="position: absolute; left: 12px; color: #94A3B8; font-size: 11px;"></i>
+                        <input type="password" id="change-confirm-password" placeholder="Repite la contraseña" required
+                            style="width: 100%; font-size: 11.5px; padding: 9px 38px 9px 32px; border: 1.5px solid #E2E8F0; border-radius: 10px; font-weight: 500; outline: none;"
+                            onfocus="this.style.borderColor='#0B5640'" onblur="this.style.borderColor='#E2E8F0'">
+                        <button type="button" class="btn-toggle-pw" data-target="change-confirm-password"
+                            style="position: absolute; right: 10px; background: transparent; border: none; color: #94A3B8; cursor: pointer; padding: 4px;">
+                            <i class="fa-solid fa-eye text-[12px]"></i>
+                        </button>
+                    </div>
+                    <!-- Indicador visual de coincidencia en tiempo real -->
+                    <div id="change-password-match-indicator" class="hidden mb-3 text-[11px] font-bold"></div>
+
+                    <div id="change-password-error" class="hidden mb-4 p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-[11px] font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span id="change-password-error-text"></span>
+                </div>
+
+                <div class="flex items-center justify-end gap-2">
+                    <button type="button" id="btn-cancel-change-password"
+                        style="padding: 9px 16px; border: 1.5px solid #E2E8F0; background: white; border-radius: 10px; font-size: 11px; font-weight: 700; color: #64748B; cursor: pointer;">
+                        Cancelar
+                    </button>
+                    <button type="submit" id="btn-change-password-submit"
+                        style="background: linear-gradient(135deg, #0B5640, #018D38); color: white; border: none; padding: 9px 18px; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                        Actualizar Contraseña
+                    </button>
+                </div>
             </form>
         </div>
     </div>
@@ -3753,32 +4382,80 @@
             if (selectEl) selectEl.value = val;
         };
 
-        // ===== MODAL LOGIN TOGGLE =====
-        // NOTA: La lógica de validación del formulario está en script.js (initSupervisorPortal)
-        // Aquí solo manejamos la apertura desde el botón lateral
+
+        // ===== CONTROLADOR CENTRALIZADO Y ROBUSTO DEL MODAL DE LOGIN DIAT =====
+        window.openLoginModal = function (e) {
+            if (e) {
+                if (typeof e.preventDefault === 'function') e.preventDefault();
+                if (typeof e.stopPropagation === 'function') e.stopPropagation();
+            }
+            const modal = document.getElementById('modal-login');
+            if (!modal) return;
+
+            // Limpiar alertas de error previas
+            const errBox = document.getElementById('login-error-alert');
+            if (errBox) errBox.classList.add('hidden');
+
+            modal.classList.remove('hidden');
+            // Timestamp de apertura para evitar que el mismo click cierre el modal por falso contacto en backdrop
+            modal._openedAt = Date.now();
+
+            // Auto-focus al campo de usuario para experiencia de uso inmediata
+            setTimeout(() => {
+                const inp = document.getElementById('login-username');
+                if (inp) {
+                    inp.focus();
+                    inp.select();
+                }
+            }, 60);
+        };
+
+        window.closeLoginModal = function (e) {
+            if (e) {
+                if (typeof e.preventDefault === 'function') e.preventDefault();
+                if (typeof e.stopPropagation === 'function') e.stopPropagation();
+            }
+            const modal = document.getElementById('modal-login');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        };
+
         (function () {
-            const trigger = document.getElementById('btn-login-trigger');
             const modal = document.getElementById('modal-login');
             const closeBtn = document.getElementById('btn-close-login');
 
-            if (trigger && modal) {
-                trigger.addEventListener('click', () => {
-                    modal.classList.remove('hidden');
-                });
+            if (closeBtn) {
+                closeBtn.addEventListener('click', (e) => window.closeLoginModal(e));
             }
-            if (closeBtn && modal) {
-                closeBtn.addEventListener('click', () => {
-                    modal.classList.add('hidden');
-                });
-            }
-            // Cerrar al hacer clic en el fondo oscuro
+
+            // Cerrar al hacer clic en el fondo oscuro con doble verificación de seguridad
             if (modal) {
+                let mouseDownOnBackdrop = false;
+                modal.addEventListener('mousedown', (e) => {
+                    mouseDownOnBackdrop = (e.target === modal);
+                });
                 modal.addEventListener('click', (e) => {
-                    if (e.target === modal) {
-                        modal.classList.add('hidden');
+                    // Si el modal fue abierto hace menos de 400ms, ignorar el evento para prevenir cierre inmediato
+                    if (modal._openedAt && (Date.now() - modal._openedAt < 400)) {
+                        return;
                     }
+                    if (mouseDownOnBackdrop && e.target === modal) {
+                        window.closeLoginModal(e);
+                    }
+                    mouseDownOnBackdrop = false;
                 });
             }
+
+            // Tecla ESC para cerrar modal
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' || e.key === 'Esc') {
+                    const m = document.getElementById('modal-login');
+                    if (m && !m.classList.contains('hidden')) {
+                        window.closeLoginModal(e);
+                    }
+                }
+            });
         })();
     </script>
 

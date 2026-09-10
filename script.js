@@ -9457,10 +9457,16 @@ function toDateInputValue(str) {
     return str;
 }
 
-// Catálogo de usuarios del portal — añadir más supervisores aquí
+// Catálogo de metadatos de supervisores del portal (Autenticación centralizada en Supabase)
 const PORTAL_USERS = {
+    'ADMIN': {
+        name: 'Administrador General DIAT',
+        supervisorExcelName: 'ADMINISTRADOR',
+        role: 'Administrador General DIAT',
+        email: 'admin.diat@antioquia.gov.co',
+        initials: 'AD'
+    },
     'JMARINGA': {
-        password: 'DIAT2026',
         name: 'Jonathan Marín Gallego',
         supervisorExcelName: 'JONATHAN MARÍN GALLEGO',
         role: 'Supervisor Técnico DIAT',
@@ -9468,12 +9474,144 @@ const PORTAL_USERS = {
         initials: 'JM'
     },
     'CQUIRAMAH': {
-        password: 'DIAT2026',
         name: 'Cristian Camilo Quirama Henao',
         supervisorExcelName: 'CRISTIAN CAMILO QUIRAMA HENAO',
         role: 'Supervisor Técnico DIAT',
         email: 'cquirama@antioquia.gov.co',
         initials: 'CQ'
+    },
+    'NGOMEZI': {
+        name: 'Natalia Gómez Isaza',
+        supervisorExcelName: 'NATALIA GÓMEZ ISAZA',
+        role: 'Supervisora Técnica DIAT',
+        email: 'ngomez@antioquia.gov.co',
+        initials: 'NG'
+    },
+    'AMUNOZL': {
+        name: 'Adriana Patricia Muñoz Londoño',
+        supervisorExcelName: 'ADRIANA PATRICIA MUÑOZ LONDOÑO',
+        role: 'Supervisora Técnica DIAT',
+        email: 'amunoz@antioquia.gov.co',
+        initials: 'AM'
+    },
+    'AHERRERAC': {
+        name: 'Andres Felipe Herrera Cruz',
+        supervisorExcelName: 'ANDRES FELIPE HERRERA CRUZ',
+        role: 'Supervisor Técnico DIAT',
+        email: 'aherrera@antioquia.gov.co',
+        initials: 'AH'
+    },
+    'CBUITRAGOO': {
+        name: 'Catalina Buitrago Orozco',
+        supervisorExcelName: 'CATALINA BUITRAGO OROZCO',
+        role: 'Supervisora Técnica DIAT',
+        email: 'cbuitrago@antioquia.gov.co',
+        initials: 'CB'
+    },
+    'DDUQUES': {
+        name: 'Daisy Lorena Duque Sepúlveda',
+        supervisorExcelName: 'DAISY LORENA DUQUE SEPÚLVEDA',
+        role: 'Supervisora Técnica DIAT',
+        email: 'dduque@antioquia.gov.co',
+        initials: 'DD'
+    },
+    'DHINCAPIEP': {
+        name: 'Dalis Milena Hincapie Piedrahita',
+        supervisorExcelName: 'DALIS MILENA HINCAPIE PIEDRAHITA',
+        role: 'Supervisora Técnica DIAT',
+        email: 'dhincapie@antioquia.gov.co',
+        initials: 'DH'
+    },
+    'DGOMEZD': {
+        name: 'David Alberto Gomez Duque',
+        supervisorExcelName: 'DAVID ALBERTO GOMEZ DUQUE',
+        role: 'Supervisor Técnico DIAT',
+        email: 'dgomez@antioquia.gov.co',
+        initials: 'DG'
+    },
+    'DDUQUEP': {
+        name: 'Doris Duque Pineda',
+        supervisorExcelName: 'DORIS DUQUE PINEDA',
+        role: 'Supervisora Técnica DIAT',
+        email: 'dduquep@antioquia.gov.co',
+        initials: 'DD'
+    },
+    'JOSPINAG': {
+        name: 'Jaime Arturo Ospina Giraldo',
+        supervisorExcelName: 'JAIME ARTURO OSPINA GIRALDO',
+        role: 'Supervisor Técnico DIAT',
+        email: 'jospina@antioquia.gov.co',
+        initials: 'JO'
+    },
+    'JSALAZAR': {
+        name: 'Jhoan Sebastian Salazar',
+        supervisorExcelName: 'JHOAN SEBASTIAN SALAZAR',
+        role: 'Supervisor Técnico DIAT',
+        email: 'jsalazar@antioquia.gov.co',
+        initials: 'JS'
+    },
+    'JSANCHEZS': {
+        name: 'Johan Albeiro Sánchez Sánchez',
+        supervisorExcelName: 'JOHAN ALBEIRO SÁNCHEZ SÁNCHEZ',
+        role: 'Supervisor Técnico DIAT',
+        email: 'jsanchez@antioquia.gov.co',
+        initials: 'JS'
+    },
+    'JDELGADOJ': {
+        name: 'Juan Pablo Delgado Jimenez',
+        supervisorExcelName: 'JUAN PABLO DELGADO JIMENEZ',
+        role: 'Supervisor Técnico DIAT',
+        email: 'jdelgado@antioquia.gov.co',
+        initials: 'JD'
+    },
+    'JGOMEZE': {
+        name: 'Juliana Gómez Echavarría',
+        supervisorExcelName: 'JULIANA GÓMEZ ECHAVARRÍA',
+        role: 'Supervisora Técnica DIAT',
+        email: 'jgomez@antioquia.gov.co',
+        initials: 'JG'
+    },
+    'JMEJIAB': {
+        name: 'Juliana Mejía Bravo',
+        supervisorExcelName: 'JULIANA MEJÍA BRAVO',
+        role: 'Supervisora Técnica DIAT',
+        email: 'jmejia@antioquia.gov.co',
+        initials: 'JM'
+    },
+    'LLONDONOG': {
+        name: 'Lorena Londoño Grajales',
+        supervisorExcelName: 'LORENA LONDOÑO GRAJALES',
+        role: 'Supervisora Técnica DIAT',
+        email: 'llondono@antioquia.gov.co',
+        initials: 'LL'
+    },
+    'MLOPERAD': {
+        name: 'Margarita Rosa Lopera Duque',
+        supervisorExcelName: 'MARGARITA ROSA LOPERA DUQUE',
+        role: 'Supervisora Técnica DIAT',
+        email: 'mlopera@antioquia.gov.co',
+        initials: 'ML'
+    },
+    'RFRANCOG': {
+        name: 'Roman Dario Franco Granda',
+        supervisorExcelName: 'ROMAN DARIO FRANCO GRANDA',
+        role: 'Supervisor Técnico DIAT',
+        email: 'rfranco@antioquia.gov.co',
+        initials: 'RF'
+    },
+    'VLOPERAR': {
+        name: 'Valentina Lopera Ramírez',
+        supervisorExcelName: 'VALENTINA LOPERA RAMÍREZ',
+        role: 'Supervisora Técnica DIAT',
+        email: 'vlopera@antioquia.gov.co',
+        initials: 'VL'
+    },
+    'YSANCHEZM': {
+        name: 'Yuliana Sanchez Montoya',
+        supervisorExcelName: 'YULIANA SANCHEZ MONTOYA',
+        role: 'Supervisora Técnica DIAT',
+        email: 'ysanchez@antioquia.gov.co',
+        initials: 'YS'
     }
 };
 
@@ -9513,87 +9651,453 @@ function getSupervisorRows() {
 
 // Inicializa el Portal de Supervisores y enlaza sus eventos
 function initSupervisorPortal() {
-    // 1. Enlace de Login
+    // 1. Enlace de Login integrado y optimizado
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
+        // Al presionar Enter en el usuario, saltar fluidamente al campo de contraseña
+        const userInpField = document.getElementById('login-username');
+        const passInpField = document.getElementById('login-password');
+        if (userInpField && passInpField) {
+            userInpField.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    passInpField.focus();
+                    passInpField.select();
+                }
+            });
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const rawInp = (document.getElementById('login-username')?.value || '').trim();
-            const userInp = rawInp.toUpperCase();
             const passInp = (document.getElementById('login-password')?.value || '').trim();
-            const passUpper = passInp.toUpperCase();
+            const btnSubmit = document.getElementById('btn-login-submit');
+            const errBox = document.getElementById('login-error-alert');
+            const errText = document.getElementById('login-error-text');
 
-            // Buscar por clave de usuario o por email o por nombre
-            let userKey = Object.keys(PORTAL_USERS).find(k => k === userInp);
-            if (!userKey) {
-                userKey = Object.keys(PORTAL_USERS).find(k => {
-                    const u = PORTAL_USERS[k];
-                    return (u.email && u.email.toUpperCase() === userInp) ||
-                           (u.name && normalizeSupervisorName(u.name) === normalizeSupervisorName(userInp)) ||
-                           (userInp.includes(k));
-                });
-            }
+            if (errBox) errBox.classList.add('hidden');
 
-            // Si no coincide con predefinidos pero la clave es DIAT2026, buscar en rawData o asignar supervisor
-            let userDef = userKey ? PORTAL_USERS[userKey] : null;
-            if (!userDef && (passUpper === 'DIAT2026')) {
-                const supRow = (typeof rawData !== 'undefined' && Array.isArray(rawData)) ? 
-                    rawData.find(r => normalizeSupervisorName(r['SUPERVISOR']) === normalizeSupervisorName(userInp)) : null;
-                const supName = supRow ? supRow['SUPERVISOR'] : (rawInp || 'Supervisor DIAT');
-                userDef = {
-                    password: 'DIAT2026',
-                    name: supName,
-                    supervisorExcelName: supName.toUpperCase(),
-                    role: 'Supervisor Técnico DIAT',
-                    email: rawInp.includes('@') ? rawInp : 'diat@antioquia.gov.co',
-                    initials: supName.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'DI'
-                };
-                userKey = userDef.initials || 'SUPERVISOR';
-            }
-
-            // Validar clave: DIAT2026 es universal, o la clave registrada del usuario
-            const isPasswordValid = (passUpper === 'DIAT2026' || (userDef && passInp === userDef.password));
-
-            if (userDef && isPasswordValid) {
-                const userObj = {
-                    username: userKey,
-                    name: userDef.name,
-                    supervisorExcelName: userDef.supervisorExcelName,
-                    role: userDef.role,
-                    email: userDef.email,
-                    initials: userDef.initials || userDef.name.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase()
-                };
-
-                const rememberMe = document.getElementById('login-remember') && document.getElementById('login-remember').checked;
-                if (rememberMe) {
-                    localStorage.setItem('diat_logged_user', JSON.stringify(userObj));
-                    sessionStorage.removeItem('diat_logged_user');
-                } else {
-                    sessionStorage.setItem('diat_logged_user', JSON.stringify(userObj));
-                    localStorage.removeItem('diat_logged_user');
+            if (!rawInp || !passInp) {
+                const msg = 'Por favor ingresa tu usuario corto asignado y tu contraseña.';
+                if (errBox && errText) {
+                    errText.textContent = msg;
+                    errBox.classList.remove('hidden');
                 }
+                alertToast('Campos requeridos', msg, 'error');
+                return;
+            }
 
-                document.getElementById('modal-login').classList.add('hidden');
+            if (btnSubmit) {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Verificando credenciales...';
+            }
 
+            try {
+                const authResult = await window.DIATDataService.loginUser(rawInp, passInp);
+
+                if (authResult.success && authResult.user) {
+                    const userObj = authResult.user;
+                    const rememberMe = document.getElementById('login-remember') && document.getElementById('login-remember').checked;
+                    
+                    if (rememberMe) {
+                        localStorage.setItem('diat_logged_user', JSON.stringify(userObj));
+                        sessionStorage.removeItem('diat_logged_user');
+                    } else {
+                        sessionStorage.setItem('diat_logged_user', JSON.stringify(userObj));
+                        localStorage.removeItem('diat_logged_user');
+                    }
+
+                    if (typeof window.closeLoginModal === 'function') {
+                        window.closeLoginModal();
+                    } else {
+                        document.getElementById('modal-login').classList.add('hidden');
+                    }
+
+                    // Fase 2: Si es primer ingreso con contraseña provisional, forzar cambio obligatorio
+                    if (authResult.mustChangePassword) {
+                        window._pendingChangeUser = userObj.username;
+                        const modalForce = document.getElementById('modal-force-password-change');
+                        if (modalForce) {
+                            modalForce.classList.remove('hidden');
+                            const errEl = document.getElementById('force-password-error');
+                            if (errEl) errEl.classList.add('hidden');
+                            const indEl = document.getElementById('force-password-match-indicator');
+                            if (indEl) { indEl.classList.add('hidden'); indEl.innerHTML = ''; }
+                            const in1 = document.getElementById('force-new-password');
+                            const in2 = document.getElementById('force-confirm-password');
+                            if (in1) in1.value = '';
+                            if (in2) in2.value = '';
+                        }
+                    } else {
+                        if (userObj.username === 'ADMIN') {
+                            window.diatAdminAuthorized = true;
+                            sessionStorage.setItem('diat_admin_authorized', 'true');
+                        }
+                        checkAuthStatus();
+                        const portalTabBtn = document.querySelector('.tab-btn[data-tab="portal"]');
+                        if (portalTabBtn) portalTabBtn.click();
+                        alertToast('Sesión Iniciada', 'Bienvenido, ' + userObj.name + '.');
+                    }
+                } else {
+                    const errorMsg = authResult.error || 'Clave incorrecta. Recuerda que la clave provisional inicial es DIAT2026.';
+                    if (errBox && errText) {
+                        let html = `<span>${errorMsg}</span>`;
+                        if (authResult.canReset || errorMsg.includes('personalizada') || errorMsg.includes('provisional')) {
+                            const uKey = String(rawInp || '').trim().toUpperCase();
+                            html += `<div class="mt-2 pt-2 border-t border-red-200/80 flex items-center justify-between gap-2">
+                                <span class="text-red-800 font-semibold text-[11px]">¿No recuerdas tu clave personalizada?</span>
+                                <button type="button" onclick="window.resetUserPassword('${uKey}');" class="px-2.5 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-900 font-bold text-[11px] transition">Restablecer a DIAT2026</button>
+                            </div>`;
+                        }
+                        errText.innerHTML = html;
+                        errBox.classList.remove('hidden');
+                    }
+                    alertToast('Credenciales Incorrectas', errorMsg, 'error');
+                }
+            } catch (err) {
+                console.error('[DIAT] Error en inicio de sesión:', err);
+                const connMsg = 'No se pudo verificar la sesión. Intenta nuevamente.';
+                if (errBox && errText) {
+                    errText.textContent = connMsg;
+                    errBox.classList.remove('hidden');
+                }
+                alertToast('Error de Conexión', connMsg, 'error');
+            } finally {
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-1.5"></i> Iniciar Sesión en el Portal';
+                }
+            }
+        });
+    }
+
+    // Toggle de visibilidad de contraseñas (ojito)
+    document.querySelectorAll('.btn-toggle-pw').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = btn.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            if (input) {
+                const isPw = input.type === 'password';
+                input.type = isPw ? 'text' : 'password';
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.className = isPw ? 'fa-solid fa-eye-slash text-[12px]' : 'fa-solid fa-eye text-[12px]';
+                }
+            }
+        });
+    });
+
+    // Validación interactiva en vivo para el modal de actualización obligatoria
+    const inForceNew = document.getElementById('force-new-password');
+    const inForceConfirm = document.getElementById('force-confirm-password');
+    const forceMatchIndicator = document.getElementById('force-password-match-indicator');
+
+    function checkForceMatchLive() {
+        if (!inForceNew || !inForceConfirm || !forceMatchIndicator) return;
+        const v1 = (inForceNew.value || '').trim();
+        const v2 = (inForceConfirm.value || '').trim();
+        const errEl = document.getElementById('force-password-error');
+
+        if (!v1 && !v2) {
+            forceMatchIndicator.classList.add('hidden');
+            forceMatchIndicator.innerHTML = '';
+            return;
+        }
+
+        forceMatchIndicator.classList.remove('hidden');
+
+        if (v1.length < 8) {
+            forceMatchIndicator.innerHTML = `<span class="inline-flex items-center gap-1.5 text-amber-600 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200"><i class="fa-solid fa-triangle-exclamation"></i> Mínimo 8 caracteres (llevas ${v1.length})</span>`;
+            return;
+        }
+
+        if (v2.length === 0) {
+            forceMatchIndicator.innerHTML = `<span class="inline-flex items-center gap-1.5 text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200"><i class="fa-solid fa-info-circle"></i> Escribe la misma clave abajo para confirmar</span>`;
+            return;
+        }
+
+        if (v1 === v2) {
+            forceMatchIndicator.innerHTML = `<span class="inline-flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-300 font-bold"><i class="fa-solid fa-circle-check text-emerald-600"></i> ¡Las contraseñas coinciden correctamente!</span>`;
+            if (errEl) errEl.classList.add('hidden');
+        } else {
+            forceMatchIndicator.innerHTML = `<span class="inline-flex items-center gap-1.5 text-red-600 bg-red-50 px-2.5 py-1 rounded-md border border-red-200 font-bold"><i class="fa-solid fa-circle-xmark text-red-500"></i> Las contraseñas no coinciden (revisa letras o mayúsculas)</span>`;
+        }
+    }
+
+    if (inForceNew && inForceConfirm) {
+        inForceNew.addEventListener('input', checkForceMatchLive);
+        inForceConfirm.addEventListener('input', checkForceMatchLive);
+    }
+
+    // Formulario de Cambio Obligatorio de Contraseña (Primer Ingreso Fase 2)
+    const forcePwForm = document.getElementById('force-password-form');
+    if (forcePwForm) {
+        forcePwForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newPw = (document.getElementById('force-new-password')?.value || '').trim();
+            const confirmPw = (document.getElementById('force-confirm-password')?.value || '').trim();
+            const errBox = document.getElementById('force-password-error');
+            const errText = document.getElementById('force-password-error-text');
+            const btnSubmit = document.getElementById('btn-force-password-submit');
+
+            if (newPw.length < 8) {
+                if (errBox && errText) {
+                    errText.textContent = 'La nueva contraseña debe tener al menos 8 caracteres.';
+                    errBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (newPw !== confirmPw) {
+                if (errBox && errText) {
+                    errText.textContent = 'Las contraseñas no coinciden. Por favor verifícalas.';
+                    errBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (newPw.toUpperCase() === 'DIAT2026') {
+                if (errBox && errText) {
+                    errText.textContent = 'Debes elegir una contraseña distinta a la clave provisional genérica.';
+                    errBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (errBox) errBox.classList.add('hidden');
+            if (btnSubmit) {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Guardando...';
+            }
+
+            try {
+                const targetU = window._pendingChangeUser || (getLoggedUser()?.username);
+                await window.DIATDataService.updateUserPassword(newPw, targetU);
+                document.getElementById('modal-force-password-change').classList.add('hidden');
+                
+                // Asegurar que el usuario activo quede marcado sin requerir cambio
+                const currentLog = getLoggedUser();
+                if (currentLog) {
+                    currentLog.passwordCustomized = true;
+                    if (sessionStorage.getItem('diat_logged_user')) sessionStorage.setItem('diat_logged_user', JSON.stringify(currentLog));
+                    if (localStorage.getItem('diat_logged_user')) localStorage.setItem('diat_logged_user', JSON.stringify(currentLog));
+                }
+                
                 checkAuthStatus();
 
-                // Redirigir a pestaña del Portal y sub-pestaña dashboard
                 const portalTabBtn = document.querySelector('.tab-btn[data-tab="portal"]');
                 if (portalTabBtn) portalTabBtn.click();
 
-                alertToast('Sesión Iniciada', 'Bienvenido, ' + userDef.name + '.');
-            } else {
-                alertToast('Credenciales Incorrectas', 'Clave incorrecta. Recuerda que la clave para ingresar es DIAT2026.', 'error');
+                alertToast('¡Contraseña Actualizada!', 'Tu contraseña personal ha sido configurada con éxito. ¡Bienvenido al Portal DIAT!');
+            } catch (upErr) {
+                console.error('[DIAT] Error actualizando contraseña:', upErr);
+                if (errBox && errText) {
+                    errText.textContent = upErr.message || 'Error al guardar contraseña.';
+                    errBox.classList.remove('hidden');
+                }
+            } finally {
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = '<i class="fa-solid fa-check mr-1.5"></i> Guardar Contraseña y Continuar';
+                }
+            }
+        });
+    }
+
+    // Modal de Cambio Voluntario de Contraseña (Desde Mi Perfil)
+    const btnCloseChangePw = document.getElementById('btn-close-change-password');
+    const btnCancelChangePw = document.getElementById('btn-cancel-change-password');
+    [btnCloseChangePw, btnCancelChangePw].forEach(btn => {
+        if (btn) {
+            btn.addEventListener('click', () => {
+                document.getElementById('modal-change-password').classList.add('hidden');
+            });
+        }
+    });
+
+    // Validación interactiva en vivo para el modal de cambio voluntario
+    const inChangeNew = document.getElementById('change-new-password');
+    const inChangeConfirm = document.getElementById('change-confirm-password');
+    const changeMatchIndicator = document.getElementById('change-password-match-indicator');
+
+    function checkChangeMatchLive() {
+        if (!inChangeNew || !inChangeConfirm || !changeMatchIndicator) return;
+        const v1 = (inChangeNew.value || '').trim();
+        const v2 = (inChangeConfirm.value || '').trim();
+        const errEl = document.getElementById('change-password-error');
+
+        if (!v1 && !v2) {
+            changeMatchIndicator.classList.add('hidden');
+            changeMatchIndicator.innerHTML = '';
+            return;
+        }
+
+        changeMatchIndicator.classList.remove('hidden');
+
+        if (v1.length < 8) {
+            changeMatchIndicator.innerHTML = `<span class="inline-flex items-center gap-1.5 text-amber-600 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200"><i class="fa-solid fa-triangle-exclamation"></i> Mínimo 8 caracteres (llevas ${v1.length})</span>`;
+            return;
+        }
+
+        if (v2.length === 0) {
+            changeMatchIndicator.innerHTML = `<span class="inline-flex items-center gap-1.5 text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200"><i class="fa-solid fa-info-circle"></i> Escribe la misma clave abajo para confirmar</span>`;
+            return;
+        }
+
+        if (v1 === v2) {
+            changeMatchIndicator.innerHTML = `<span class="inline-flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-300 font-bold"><i class="fa-solid fa-circle-check text-emerald-600"></i> ¡Las contraseñas coinciden correctamente!</span>`;
+            if (errEl) errEl.classList.add('hidden');
+        } else {
+            changeMatchIndicator.innerHTML = `<span class="inline-flex items-center gap-1.5 text-red-600 bg-red-50 px-2.5 py-1 rounded-md border border-red-200 font-bold"><i class="fa-solid fa-circle-xmark text-red-500"></i> Las contraseñas no coinciden</span>`;
+        }
+    }
+
+    if (inChangeNew && inChangeConfirm) {
+        inChangeNew.addEventListener('input', checkChangeMatchLive);
+        inChangeConfirm.addEventListener('input', checkChangeMatchLive);
+    }
+
+    const changePwForm = document.getElementById('change-password-form');
+    if (changePwForm) {
+        changePwForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newPw = (document.getElementById('change-new-password')?.value || '').trim();
+            const confirmPw = (document.getElementById('change-confirm-password')?.value || '').trim();
+            const errBox = document.getElementById('change-password-error');
+            const errText = document.getElementById('change-password-error-text');
+            const btnSubmit = document.getElementById('btn-change-password-submit');
+
+            if (newPw.length < 8) {
+                if (errBox && errText) {
+                    errText.textContent = 'La nueva contraseña debe tener al menos 8 caracteres.';
+                    errBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (newPw !== confirmPw) {
+                if (errBox && errText) {
+                    errText.textContent = 'Las contraseñas ingresadas no coinciden.';
+                    errBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (errBox) errBox.classList.add('hidden');
+            if (btnSubmit) {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Actualizando...';
+            }
+
+            try {
+                const targetU = getLoggedUser()?.username;
+                await window.DIATDataService.updateUserPassword(newPw, targetU);
+                
+                const currentLog = getLoggedUser();
+                if (currentLog) {
+                    currentLog.passwordCustomized = true;
+                    if (sessionStorage.getItem('diat_logged_user')) sessionStorage.setItem('diat_logged_user', JSON.stringify(currentLog));
+                    if (localStorage.getItem('diat_logged_user')) localStorage.setItem('diat_logged_user', JSON.stringify(currentLog));
+                }
+
+                document.getElementById('modal-change-password').classList.add('hidden');
+                checkAuthStatus();
+                alertToast('Contraseña Actualizada', 'Tu contraseña ha sido actualizada exitosamente.');
+            } catch (err) {
+                console.error('[DIAT] Error en cambio voluntario de clave:', err);
+                if (errBox && errText) {
+                    errText.textContent = err.message || 'Error al actualizar contraseña.';
+                    errBox.classList.remove('hidden');
+                }
+            } finally {
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = 'Actualizar Contraseña';
+                }
             }
         });
     }
 
     const triggerAuth = document.getElementById('btn-portal-login-trigger');
     if (triggerAuth) {
-        triggerAuth.addEventListener('click', () => {
-            document.getElementById('modal-login').classList.remove('hidden');
+        triggerAuth.addEventListener('click', (e) => {
+            if (typeof window.openLoginModal === 'function') {
+                window.openLoginModal(e);
+            } else {
+                document.getElementById('modal-login')?.classList.remove('hidden');
+            }
         });
     }
+
+    // Formulario de Autorización de Administrador (Control de Visitas)
+    const adminAuthForm = document.getElementById('admin-auth-form');
+    if (adminAuthForm) {
+        adminAuthForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const u = (document.getElementById('admin-auth-user')?.value || '').trim();
+            const p = (document.getElementById('admin-auth-password')?.value || '').trim();
+            const errBox = document.getElementById('admin-auth-error');
+            const errText = document.getElementById('admin-auth-error-text');
+
+            if (errBox) errBox.classList.add('hidden');
+            if (!u || !p) {
+                if (errBox && errText) {
+                    errText.textContent = 'Por favor ingresa usuario y contraseña de Administrador.';
+                    errBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            try {
+                const authRes = await window.DIATDataService.loginUser(u, p);
+                const isAuthAdmin = authRes.success && authRes.user && (
+                    authRes.user.username === 'ADMIN' || 
+                    (authRes.user.role && authRes.user.role.toLowerCase().includes('administrador'))
+                );
+
+                if (isAuthAdmin) {
+                    window.diatAdminAuthorized = true;
+                    sessionStorage.setItem('diat_admin_authorized', 'true');
+                    const modal = document.getElementById('modal-admin-auth');
+                    if (modal) modal.classList.add('hidden');
+                    alertToast('Acceso Autorizado', 'Bienvenido al Control de Visitas (ADMIN).');
+
+                    const cb = window.pendingAdminAuthCallback;
+                    window.pendingAdminAuthCallback = null;
+                    window.pendingAdminCancelCallback = null;
+                    if (typeof cb === 'function') {
+                        cb();
+                    } else {
+                        window.openControlVisitasHub('registrar');
+                    }
+                    return;
+                }
+            } catch (ex) {
+                console.error('Error validando administrador:', ex);
+            }
+
+            if (errBox && errText) {
+                errText.textContent = 'Credenciales de Administrador incorrectas o usuario no autorizado.';
+                errBox.classList.remove('hidden');
+            }
+        });
+    }
+
+    const btnCloseAdminAuth = document.getElementById('btn-close-admin-auth');
+    const btnCancelAdminAuth = document.getElementById('btn-cancel-admin-auth');
+    [btnCloseAdminAuth, btnCancelAdminAuth].forEach(btn => {
+        if (btn) {
+            btn.addEventListener('click', () => {
+                if (typeof window.closeAdminAuthModal === 'function') {
+                    window.closeAdminAuthModal();
+                } else {
+                    const m = document.getElementById('modal-admin-auth');
+                    if (m) m.classList.add('hidden');
+                }
+            });
+        }
+    });
 
     // 2. Enlace de Perfil en Header
     const headerProfile = document.getElementById('header-user-profile');
@@ -9604,7 +10108,11 @@ function initSupervisorPortal() {
             if (logged) {
                 document.getElementById('user-menu-dropdown').classList.toggle('hidden');
             } else {
-                document.getElementById('modal-login').classList.remove('hidden');
+                if (typeof window.openLoginModal === 'function') {
+                    window.openLoginModal(e);
+                } else {
+                    document.getElementById('modal-login')?.classList.remove('hidden');
+                }
             }
         });
     }
@@ -9623,6 +10131,19 @@ function initSupervisorPortal() {
             const action = item.getAttribute('data-action');
             if (action === 'logout') {
                 handleLogout();
+            } else if (action === 'cambiar-password') {
+                const modalChange = document.getElementById('modal-change-password');
+                if (modalChange) {
+                    modalChange.classList.remove('hidden');
+                    const errBox = document.getElementById('change-password-error');
+                    if (errBox) errBox.classList.add('hidden');
+                    const indEl = document.getElementById('change-password-match-indicator');
+                    if (indEl) { indEl.classList.add('hidden'); indEl.innerHTML = ''; }
+                    const in1 = document.getElementById('change-new-password');
+                    const in2 = document.getElementById('change-confirm-password');
+                    if (in1) in1.value = '';
+                    if (in2) in2.value = '';
+                }
             } else if (action === 'visitas') {
                 const vtTabBtn = document.querySelector('.tab-btn[data-tab="visitas"]');
                 if (vtTabBtn) vtTabBtn.click();
@@ -9656,8 +10177,167 @@ function initSupervisorPortal() {
             document.querySelectorAll('.portal-panel').forEach(p => p.classList.add('hidden'));
             const panel = document.getElementById(`portal-panel-${target}`);
             if (panel) panel.classList.remove('hidden');
+            if (target === 'auditoria' && typeof window.renderAuditoriaTab === 'function') {
+                window.renderAuditoriaTab();
+            }
         });
     });
+
+    // Acciones de Header del Portal Rediseñado
+    const btnHeaderVisita = document.getElementById('btn-header-nueva-visita-portal');
+    if (btnHeaderVisita) {
+        btnHeaderVisita.addEventListener('click', () => {
+            const regBtn = document.getElementById('btn-registrar-visita-portal');
+            if (regBtn) regBtn.click();
+        });
+    }
+
+    const btnHeaderPw = document.getElementById('btn-header-cambiar-pw-portal');
+    if (btnHeaderPw) {
+        btnHeaderPw.addEventListener('click', () => {
+            const perfilSubtab = document.querySelector('.portal-subtab-btn[data-subtab="perfil"]');
+            if (perfilSubtab) {
+                perfilSubtab.click();
+                const inp = document.getElementById('portal-direct-new-pw');
+                if (inp) {
+                    inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    inp.focus();
+                }
+            } else {
+                const modalChange = document.getElementById('modal-change-password');
+                if (modalChange) modalChange.classList.remove('hidden');
+            }
+        });
+    }
+
+    // Toolbar de búsqueda y filtros para convenios del supervisor
+    const portalSearchInp = document.getElementById('portal-convenios-search');
+    if (portalSearchInp) {
+        portalSearchInp.addEventListener('input', () => {
+            if (typeof window.filterSupervisorConvenios === 'function') {
+                window.filterSupervisorConvenios();
+            }
+        });
+    }
+
+    document.querySelectorAll('.portal-filter-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            document.querySelectorAll('.portal-filter-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            if (typeof window.filterSupervisorConvenios === 'function') {
+                window.filterSupervisorConvenios();
+            }
+        });
+    });
+
+    // Formulario de cambio directo de contraseña en Mi Perfil
+    const inDirectNew = document.getElementById('portal-direct-new-pw');
+    const inDirectConfirm = document.getElementById('portal-direct-confirm-pw');
+    const directMatchInd = document.getElementById('portal-direct-match-indicator');
+
+    function checkDirectMatchLive() {
+        if (!inDirectNew || !inDirectConfirm || !directMatchInd) return;
+        const v1 = (inDirectNew.value || '').trim();
+        const v2 = (inDirectConfirm.value || '').trim();
+        const errEl = document.getElementById('portal-direct-error');
+
+        if (!v1 && !v2) {
+            directMatchInd.classList.add('hidden');
+            directMatchInd.innerHTML = '';
+            return;
+        }
+
+        directMatchInd.classList.remove('hidden');
+
+        if (v1.length < 8) {
+            directMatchInd.innerHTML = `<span class="inline-flex items-center gap-1.5 text-amber-600 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200"><i class="fa-solid fa-triangle-exclamation"></i> Mínimo 8 caracteres (llevas ${v1.length})</span>`;
+            return;
+        }
+
+        if (v2.length === 0) {
+            directMatchInd.innerHTML = `<span class="inline-flex items-center gap-1.5 text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200"><i class="fa-solid fa-info-circle"></i> Escribe la confirmación abajo</span>`;
+            return;
+        }
+
+        if (v1 === v2) {
+            directMatchInd.innerHTML = `<span class="inline-flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-300 font-bold"><i class="fa-solid fa-circle-check text-emerald-600"></i> ¡Las contraseñas coinciden correctamente!</span>`;
+            if (errEl) errEl.classList.add('hidden');
+        } else {
+            directMatchInd.innerHTML = `<span class="inline-flex items-center gap-1.5 text-red-600 bg-red-50 px-2.5 py-1 rounded-md border border-red-200 font-bold"><i class="fa-solid fa-circle-xmark text-red-500"></i> Las contraseñas no coinciden</span>`;
+        }
+    }
+
+    if (inDirectNew && inDirectConfirm) {
+        inDirectNew.addEventListener('input', checkDirectMatchLive);
+        inDirectConfirm.addEventListener('input', checkDirectMatchLive);
+    }
+
+    const directPwForm = document.getElementById('portal-direct-password-form');
+    if (directPwForm) {
+        directPwForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newPw = (document.getElementById('portal-direct-new-pw')?.value || '').trim();
+            const confirmPw = (document.getElementById('portal-direct-confirm-pw')?.value || '').trim();
+            const errBox = document.getElementById('portal-direct-error');
+            const errText = document.getElementById('portal-direct-error-text');
+            const btnSubmit = document.getElementById('btn-portal-direct-pw-submit');
+
+            if (newPw.length < 8) {
+                if (errBox && errText) {
+                    errText.textContent = 'La nueva contraseña debe tener al menos 8 caracteres.';
+                    errBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (newPw !== confirmPw) {
+                if (errBox && errText) {
+                    errText.textContent = 'Las contraseñas ingresadas no coinciden.';
+                    errBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (errBox) errBox.classList.add('hidden');
+            if (btnSubmit) {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Guardando...';
+            }
+
+            try {
+                const targetU = getLoggedUser()?.username;
+                await window.DIATDataService.updateUserPassword(newPw, targetU);
+                
+                const currentLog = getLoggedUser();
+                if (currentLog) {
+                    currentLog.passwordCustomized = true;
+                    if (sessionStorage.getItem('diat_logged_user')) sessionStorage.setItem('diat_logged_user', JSON.stringify(currentLog));
+                    if (localStorage.getItem('diat_logged_user')) localStorage.setItem('diat_logged_user', JSON.stringify(currentLog));
+                }
+
+                if (inDirectNew) inDirectNew.value = '';
+                if (inDirectConfirm) inDirectConfirm.value = '';
+                if (directMatchInd) {
+                    directMatchInd.classList.add('hidden');
+                    directMatchInd.innerHTML = '';
+                }
+
+                checkAuthStatus();
+                alertToast('¡Contraseña Actualizada!', 'Tu nueva contraseña ha sido guardada exitosamente.');
+            } catch (err) {
+                console.error('[DIAT] Error en cambio directo de clave:', err);
+                if (errBox && errText) {
+                    errText.textContent = err.message || 'Error al actualizar contraseña.';
+                    errBox.classList.remove('hidden');
+                }
+            } finally {
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = '<i class="fa-solid fa-key"></i> Actualizar Contraseña Ahora';
+                }
+            }
+        });
+    }
 
     // 5. Navegación de pestañas del Modal de Edición
     const editTabBtns = document.querySelectorAll('.edit-tab-btn');
@@ -9952,8 +10632,9 @@ function initSupervisorPortal() {
     window.editingVisitId = null;
 
     window.openEditVisitModal = function (visitId) {
-        if (!checkOrPromptAuthPassword('editar esta visita técnica')) return;
-        window.openControlVisitasHub('editar_especifica', visitId);
+        checkOrPromptAuthPassword('editar esta visita técnica', () => {
+            window.openControlVisitasHub('editar_especifica', visitId);
+        });
     };
 
     const btnEditVisitDetail = document.getElementById('btn-edit-visit-detail');
@@ -9961,10 +10642,11 @@ function initSupervisorPortal() {
         btnEditVisitDetail.addEventListener('click', () => {
             const visitId = btnEditVisitDetail.dataset.visitId;
             if (visitId) {
-                if (!checkOrPromptAuthPassword('editar esta visita técnica')) return;
-                document.getElementById('modal-detalle-visita').style.display = 'none';
-                document.getElementById('modal-detalle-visita').classList.add('hidden');
-                window.openControlVisitasHub('editar_especifica', visitId);
+                checkOrPromptAuthPassword('editar esta visita técnica', () => {
+                    document.getElementById('modal-detalle-visita').style.display = 'none';
+                    document.getElementById('modal-detalle-visita').classList.add('hidden');
+                    window.openControlVisitasHub('editar_especifica', visitId);
+                });
             }
         });
     }
@@ -10421,9 +11103,43 @@ function checkAuthStatus() {
 
         // Actualizar avatar y título de bienvenida del portal
         const portalAvatar = document.getElementById('portal-user-avatar');
-        if (portalAvatar) portalAvatar.textContent = user.initials;
+        if (portalAvatar) portalAvatar.textContent = user.initials || 'SP';
+        
         const portalWelcome = document.getElementById('portal-welcome-title');
         if (portalWelcome) portalWelcome.textContent = `Bienvenido, ${user.name}`;
+
+        const portalRoleBadge = document.getElementById('portal-user-role-badge');
+        if (portalRoleBadge) portalRoleBadge.textContent = user.role || 'Supervisor Técnico DIAT';
+
+        // Badge de seguridad de contraseña
+        const isCustomized = (localStorage.getItem('diat_pw_changed_' + user.username) === 'true') || user.passwordCustomized;
+        const secBadge = document.getElementById('portal-security-badge');
+        if (secBadge) {
+            if (isCustomized) {
+                secBadge.className = 'portal-badge-pill portal-badge-security-ok';
+                secBadge.innerHTML = '<i class="fa-solid fa-lock text-[10px]"></i><span>Contraseña Personalizada (Segura)</span>';
+            } else {
+                secBadge.className = 'portal-badge-pill portal-badge-security-warn';
+                secBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-[10px]"></i><span>Clave Provisional DIAT2026 (Cambiar)</span>';
+            }
+        }
+
+        // Subregiones cubiertas por el supervisor
+        const supervisorRows = getSupervisorRows();
+        const subregionsSet = new Set(supervisorRows.map(r => r['SUBREGION']).filter(Boolean));
+        const subregionsList = Array.from(subregionsSet);
+        const subregionsEl = document.getElementById('portal-user-subregions');
+        if (subregionsEl) {
+            subregionsEl.textContent = subregionsList.length > 0 ? subregionsList.join(' • ') : 'Antioquia Central';
+        }
+
+        // Ficha del Perfil en Sub-pestaña Mi Perfil
+        const pfName = document.getElementById('portal-profile-fullname');
+        if (pfName) pfName.textContent = user.name;
+        const pfUserVal = document.getElementById('portal-profile-username-val');
+        if (pfUserVal) pfUserVal.textContent = user.username;
+        const pfCount = document.getElementById('portal-profile-conv-count');
+        if (pfCount) pfCount.textContent = supervisorRows.length;
 
         if (unauthorized) unauthorized.classList.add('hidden');
         if (authorized) authorized.classList.remove('hidden');
@@ -10448,6 +11164,8 @@ function checkAuthStatus() {
 function handleLogout() {
     localStorage.removeItem('diat_logged_user');
     sessionStorage.removeItem('diat_logged_user');
+    sessionStorage.removeItem('diat_admin_authorized');
+    window.diatAdminAuthorized = false;
     checkAuthStatus();
 
     // Regresar a la pestaña principal (Resumen)
@@ -10469,8 +11187,9 @@ function checkAndRenderPortal() {
 function renderSupervisorPortal() {
     const supervisorRows = getSupervisorRows();
 
-    // 1. Calcular KPIs
-    let activos = 0, porLiquidar = 0, finalizados = 0, sumInv = 0, sumLong = 0;
+    // 1. Calcular KPIs Contractuales y Físicos
+    let activos = 0, porLiquidar = 0, finalizados = 0, sumInv = 0, sumLong = 0, sumArea = 0;
+    let sumFisico = 0;
 
     supervisorRows.forEach(r => {
         const state = getSystemState(r['ESTADO CONVENIO']).label;
@@ -10480,26 +11199,93 @@ function renderSupervisorPortal() {
 
         sumInv += (r['APORTE DEPARTAMENTO'] || 0) + (r['ADICION DEPARTAMENTO'] || 0);
         sumLong += getRowLongitudEjecutada(r);
+        sumArea += getRowAreaEjecutada(r);
+        sumFisico += (r['FISICO_NORM'] || 0);
     });
 
-    const alertsCount = getAlertsCount(supervisorRows);
+    const avgFisico = supervisorRows.length > 0 ? (sumFisico / supervisorRows.length) : 0;
+
+    // 2. Visitas Técnicas asignadas a este supervisor
+    const allVisits = window.DIATDataService ? window.DIATDataService.getTechnicalVisits() : [];
+    const assignedIds = supervisorRows.map(r => String(r['CONVENIO']).trim());
+    const supervisorVisits = allVisits.filter(v => assignedIds.includes(String(v.convenioId).trim()));
+    const realizadasCount = supervisorVisits.filter(v => v.estado !== 'Programada').length;
+    const programadasCount = supervisorVisits.filter(v => v.estado === 'Programada').length;
+
+    // 3. Alertas específicas y desgloses
+    const today = new Date();
+    let vencidosCount = 0, desfasesCount = 0;
+    supervisorRows.forEach(r => {
+        const estStr = String(r['ESTADO CONVENIO'] || '').toLowerCase();
+        if (estStr.includes('liquidado') || estStr.includes('resciliado')) return;
+
+        let termStr = r['NUEVA FECHA DE TERMINACION'] || r['FECHA DE TERMINACION'];
+        let termDate = parseCOPDate(termStr);
+        const f = r['FISICO_NORM'] || 0;
+        const fin = r['FINANCIERO_NORM'] || 0;
+
+        if (termDate) {
+            const msLeft = termDate.getTime() - today.getTime();
+            const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+            if (daysLeft <= 30) vencidosCount++;
+        }
+        if (fin > f + 15) desfasesCount++;
+    });
+
+    const totalAlerts = vencidosCount + desfasesCount;
 
     // Escribir KPIs en HTML
-    document.getElementById('kpi-port-total').textContent = supervisorRows.length;
-    document.getElementById('kpi-port-ejec').textContent = activos;
-    document.getElementById('kpi-port-liq').textContent = porLiquidar;
-    document.getElementById('kpi-port-fin').textContent = finalizados;
-    document.getElementById('kpi-port-inv').textContent = formatCurrency(sumInv);
-    document.getElementById('kpi-port-long').textContent = formatNumber(sumLong) + ' m';
-    document.getElementById('kpi-port-venc').textContent = alertsCount;
-    document.getElementById('kpi-port-update').textContent = 'Corte: ' + new Date().toLocaleDateString('es-CO');
+    const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
-    // 2. Renderizar subpestañas y gráficos
+    // Hero Cards
+    setTxt('kpi-port-total', supervisorRows.length);
+    setTxt('kpi-port-ejec', activos);
+    setTxt('kpi-port-liq', porLiquidar);
+    setTxt('kpi-port-fin', finalizados);
+
+    setTxt('kpi-port-avg-fisico', avgFisico.toFixed(1) + '%');
+    const barFisico = document.getElementById('kpi-port-avg-bar');
+    if (barFisico) barFisico.style.width = Math.min(100, Math.max(0, avgFisico)) + '%';
+
+    setTxt('kpi-port-visitas-total', supervisorVisits.length);
+    setTxt('kpi-port-visitas-realizadas', realizadasCount);
+    setTxt('kpi-port-visitas-programadas', programadasCount);
+
+    setTxt('kpi-port-venc', totalAlerts);
+    setTxt('kpi-port-alertas-vencidos', vencidosCount);
+    setTxt('kpi-port-alertas-desfases', desfasesCount);
+
+    // Barra secundaria
+    setTxt('kpi-port-inv', formatCurrency(sumInv));
+    setTxt('kpi-port-long', formatNumber(sumLong) + ' m');
+    setTxt('kpi-port-area', formatNumber(sumArea) + ' m²');
+    setTxt('kpi-port-update', 'Corte: ' + new Date().toLocaleDateString('es-CO'));
+
+    // Badges en pestañas de subnavegación
+    setTxt('badge-count-convenios', supervisorRows.length);
+    setTxt('badge-count-visitas', supervisorVisits.length);
+    setTxt('badge-count-alertas', totalAlerts);
+
+    // 4. Renderizar subpestañas y gráficos
     renderSupervisorCharts(supervisorRows);
     renderSupervisorConvenios(supervisorRows);
     renderSupervisorAlertas(supervisorRows);
     renderSupervisorVisitasTable(supervisorRows);
     renderSupervisorHistorialTable(supervisorRows);
+
+    // 5. Visibilidad y precarga de Bitácora de Auditoría para Administrador
+    const loggedU = getLoggedUser();
+    const isAdmin = (loggedU && loggedU.username === 'ADMIN') || window.diatAdminAuthorized;
+    const auditSubtabBtn = document.getElementById('btn-portal-subtab-auditoria');
+    if (auditSubtabBtn) {
+        auditSubtabBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+        if (isAdmin && window.DIATDataService) {
+            window.DIATDataService.getAuditLogs(100).then(logs => {
+                const countBadge = document.getElementById('badge-count-auditoria');
+                if (countBadge) countBadge.textContent = (logs || []).length;
+            }).catch(() => {});
+        }
+    }
 }
 
 // Variable global para almacenar las instancias de los gráficos del portal del supervisor
@@ -10550,8 +11336,9 @@ function renderSupervisorCharts(supervisorRows) {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            font: { family: 'Poppins', size: 10 },
-                            color: '#475569'
+                            font: { family: 'Poppins', size: 10, weight: 'bold' },
+                            color: '#475569',
+                            padding: 12
                         }
                     },
                     tooltip: {
@@ -10562,7 +11349,7 @@ function renderSupervisorCharts(supervisorRows) {
                         cornerRadius: 8
                     }
                 },
-                cutout: '60%'
+                cutout: '65%'
             }
         });
     }
@@ -10608,8 +11395,9 @@ function renderSupervisorCharts(supervisorRows) {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            font: { family: 'Poppins', size: 10 },
-                            color: '#475569'
+                            font: { family: 'Poppins', size: 10, weight: 'bold' },
+                            color: '#475569',
+                            padding: 12
                         }
                     },
                     tooltip: {
@@ -10629,7 +11417,7 @@ function renderSupervisorCharts(supervisorRows) {
                     x: {
                         grid: { display: false },
                         ticks: {
-                            font: { family: 'Poppins', size: 9 },
+                            font: { family: 'Poppins', size: 9, weight: 'bold' },
                             color: '#64748B'
                         }
                     },
@@ -10649,77 +11437,206 @@ function renderSupervisorCharts(supervisorRows) {
     }
 }
 
-// Renderiza las tarjetas de convenios asignados
+// Filtra dinámicamente los convenios del supervisor con el buscador y chips
+window.filterSupervisorConvenios = function() {
+    const supervisorRows = getSupervisorRows();
+    const searchInp = document.getElementById('portal-convenios-search');
+    const query = searchInp ? searchInp.value.trim().toLowerCase() : '';
+
+    const activeChip = document.querySelector('.portal-filter-chip.active');
+    const filterType = activeChip ? activeChip.getAttribute('data-filter') : 'all';
+
+    let filtered = supervisorRows.filter(r => {
+        // Filtro por texto de búsqueda
+        if (query) {
+            const id = String(r['CONVENIO'] || '').toLowerCase();
+            const mun = String(r['MUNICIPIO'] || '').toLowerCase();
+            const obj = String(r['OBJETO'] || '').toLowerCase();
+            if (!id.includes(query) && !mun.includes(query) && !obj.includes(query)) {
+                return false;
+            }
+        }
+
+        // Filtro por chip de categoría
+        const state = getSystemState(r['ESTADO CONVENIO']).label;
+        if (filterType === 'ejecucion') return state === 'En Ejecución';
+        if (filterType === 'liquidar') return state === 'Por Liquidar';
+        if (filterType === 'finalizado') return state === 'Liquidado' || state === 'Ejecutado';
+        if (filterType === 'alerta') {
+            const fin = r['FINANCIERO_NORM'] || 0;
+            const fis = r['FISICO_NORM'] || 0;
+            return fin > fis + 15;
+        }
+
+        return true;
+    });
+
+    renderSupervisorConveniosGrid(filtered);
+};
+
+// Renderiza las tarjetas enriquecidas de convenios asignados (v2)
 function renderSupervisorConvenios(supervisorRows) {
+    renderSupervisorConveniosGrid(supervisorRows);
+}
+
+function renderSupervisorConveniosGrid(rows) {
     const grid = document.getElementById('portal-convenios-grid');
     if (!grid) return;
     grid.innerHTML = '';
 
-    if (supervisorRows.length === 0) {
-        grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 font-medium text-sm italic">No tienes convenios asignados bajo tu supervisión.</div>`;
+    if (!rows || rows.length === 0) {
+        grid.innerHTML = `
+            <div class="col-span-full text-center py-16 px-4 bg-white rounded-2xl border border-slate-200">
+                <i class="fa-solid fa-folder-open text-slate-300 text-4xl mb-3 block"></i>
+                <p class="text-slate-600 font-bold text-sm">No se encontraron convenios que coincidan con la búsqueda o filtro.</p>
+                <p class="text-slate-400 text-xs mt-1">Prueba cambiando los criterios en la barra superior.</p>
+            </div>
+        `;
         return;
     }
 
-    supervisorRows.forEach(row => {
+    rows.forEach(row => {
         const id = String(row['CONVENIO']).trim();
         const municipio = row['MUNICIPIO'] || 'N/A';
+        const subregion = row['SUBREGION'] || '';
         const fisico = row['FISICO_NORM'] || 0;
         const financiero = row['FINANCIERO_NORM'] || 0;
-        const objeto = row['OBJETO'] || 'Sin descripción';
-        const truncatedObjeto = objeto.length > 120 ? objeto.substring(0, 120) + '...' : objeto;
-        const estado = row['ESTADO CONVENIO'] || 'N/A';
+        const valorTotal = (row['VALOR TOTAL'] || 0);
+        const objeto = row['OBJETO'] || 'Sin descripción u objeto registrado';
+        const truncatedObjeto = objeto.length > 130 ? objeto.substring(0, 130) + '...' : objeto;
+        const estado = row['ESTADO CONVENIO'] || 'En Ejecución';
         const sysState = getSystemState(estado);
+        const hasDesfase = financiero > fisico + 15;
 
         const card = document.createElement('div');
-        card.className = 'supervisor-card';
+        card.className = 'portal-convenio-card-v2';
         card.innerHTML = `
             <div>
-                <div class="flex justify-between items-start gap-2 mb-3">
+                <!-- Header Card -->
+                <div class="portal-card-header-bar">
                     <div>
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Convenio N°</span>
-                        <h4 class="text-base font-black text-slate-800">${id}</h4>
-                    </div>
-                    <span class="badge-estado ${sysState.badgeClass} text-[9px] font-bold uppercase tracking-wider">${sysState.label}</span>
-                </div>
-                <div class="mb-4">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Municipio</span>
-                    <p class="text-sm font-bold text-slate-700">${municipio}</p>
-                </div>
-                <div class="mb-4">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Objeto</span>
-                    <p class="text-xs text-slate-500 font-medium leading-relaxed" title="${objeto}">${truncatedObjeto}</p>
-                </div>
-                <div class="space-y-3 mb-5">
-                    <div>
-                        <div class="flex justify-between items-center text-[10px] font-bold mb-1">
-                            <span class="text-slate-400 uppercase">Avance Físico</span>
-                            <span class="text-institutional-primary font-black">${fisico.toFixed(1)}%</span>
-                        </div>
-                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div class="bg-institutional-primary h-full animate-pulse-slow" style="width: ${fisico}%; background-color: #0B5640;"></div>
+                        <span class="portal-card-id-badge">
+                            <i class="fa-solid fa-hashtag text-slate-400 text-xs"></i>
+                            ${id}
+                            <button type="button" class="portal-card-btn-copy" onclick="copyConvenioId('${id}')" title="Copiar número de convenio">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                        </span>
+                        <div class="flex items-center gap-1.5 mt-1">
+                            <span class="text-xs font-black text-slate-700 flex items-center gap-1">
+                                <i class="fa-solid fa-location-dot text-institutional-primary text-[11px]"></i>
+                                ${municipio}
+                            </span>
+                            ${subregion ? `<span class="text-[9.5px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">${subregion}</span>` : ''}
                         </div>
                     </div>
-                    <div>
-                        <div class="flex justify-between items-center text-[10px] font-bold mb-1">
-                            <span class="text-slate-400 uppercase">Avance Financiero</span>
-                            <span class="text-blue-600 font-black">${financiero.toFixed(1)}%</span>
+                    <span class="badge-estado ${sysState.badgeClass} text-[9.5px] font-extrabold uppercase tracking-wider">
+                        ${sysState.label}
+                    </span>
+                </div>
+
+                <!-- Objeto -->
+                <div class="mb-3.5">
+                    <p class="text-xs text-slate-500 font-medium leading-relaxed" title="${objeto.replace(/"/g, '&quot;')}">
+                        ${truncatedObjeto}
+                    </p>
+                    <p class="text-[11px] font-bold text-slate-700 mt-2 flex items-center justify-between">
+                        <span class="text-slate-400 font-semibold uppercase text-[10px]">Valor Total:</span>
+                        <span class="text-slate-900 font-black">${formatCurrency(valorTotal)}</span>
+                    </p>
+                </div>
+
+                <!-- Medidores de Avance Dual -->
+                <div class="portal-dual-progress-wrap">
+                    <div class="space-y-2.5">
+                        <div>
+                            <div class="flex justify-between items-center text-[10.5px] font-bold mb-1">
+                                <span class="text-slate-500 uppercase flex items-center gap-1">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span>
+                                    Avance Físico
+                                </span>
+                                <span class="text-institutional-primary font-black">${fisico.toFixed(1)}%</span>
+                            </div>
+                            <div class="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-500" style="width: ${Math.min(100, Math.max(0, fisico))}%; background-color: #0B5640;"></div>
+                            </div>
                         </div>
-                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div class="bg-blue-600 h-full" style="width: ${financiero}%"></div>
+
+                        <div>
+                            <div class="flex justify-between items-center text-[10.5px] font-bold mb-1">
+                                <span class="text-slate-500 uppercase flex items-center gap-1">
+                                    <span class="w-2 h-2 rounded-full bg-blue-600 inline-block"></span>
+                                    Avance Financiero
+                                </span>
+                                <span class="text-blue-700 font-black">${financiero.toFixed(1)}%</span>
+                            </div>
+                            <div class="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
+                                <div class="bg-blue-600 h-full rounded-full transition-all duration-500" style="width: ${Math.min(100, Math.max(0, financiero))}%;"></div>
+                            </div>
                         </div>
                     </div>
+
+                    ${hasDesfase ? `
+                        <div class="mt-2.5 pt-2 border-t border-red-100 flex items-center justify-between text-[10px] font-bold text-red-600">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i> Desfase Crítico</span>
+                            <span>+${(financiero - fisico).toFixed(1)}% financiero</span>
+                        </div>
+                    ` : ''}
                 </div>
             </div>
-            <div>
-                <button type="button" class="w-full py-2.5 bg-institutional-pale hover:bg-institutional-primary/10 text-institutional-primary font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border border-institutional-light/10" onclick="openEditConvenioModal('${id}')">
-                    <i class="fa-solid fa-pen-to-square"></i>
-                    Actualizar Convenio
+
+            <!-- Acciones Rápidas -->
+            <div class="portal-card-actions-bar">
+                <button type="button" class="portal-card-btn-edit" onclick="openEditConvenioModal('${id}')">
+                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                    <span>Actualizar</span>
+                </button>
+                <button type="button" class="portal-card-btn-visit" onclick="openNewVisitForConvenio('${id}')">
+                    <i class="fa-solid fa-camera text-xs"></i>
+                    <span>+ Visita</span>
+                </button>
+                <button type="button" class="portal-card-btn-detail" onclick="openConvenioDetailById('${id}')" title="Ver ficha técnica completa">
+                    <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
                 </button>
             </div>
         `;
         grid.appendChild(card);
     });
 }
+
+// Helpers globales para convenios y acciones directas
+window.openConvenioDetailById = function(convenioId) {
+    const row = (rawData || []).find(r => String(r['CONVENIO']).trim() === String(convenioId).trim());
+    if (row && typeof openModal === 'function') {
+        openModal(row);
+    } else {
+        alertToast('Convenio no encontrado', 'No se encontró la ficha técnica del convenio ' + convenioId, 'warning');
+    }
+};
+
+window.openNewVisitForConvenio = function(convenioId) {
+    const regBtn = document.getElementById('btn-registrar-visita-portal');
+    if (regBtn) {
+        regBtn.click();
+        setTimeout(() => {
+            const selectEl = document.getElementById('visit-convenio-select');
+            if (selectEl) {
+                selectEl.value = String(convenioId).trim();
+                selectEl.dispatchEvent(new Event('change'));
+            }
+        }, 150);
+    }
+};
+
+window.copyConvenioId = function(convenioId) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(String(convenioId).trim()).then(() => {
+            alertToast('Convenio Copiado', `N° ${convenioId} copiado al portapapeles.`);
+        });
+    } else {
+        alertToast('Convenio N°', String(convenioId).trim());
+    }
+};
 
 // Cuenta de alertas específicas del supervisor
 function getAlertsCount(supervisorRows) {
@@ -11164,6 +12081,104 @@ function renderSupervisorHistorialTable(supervisorRows) {
         tbody.appendChild(tr);
     });
 }
+
+// Renderizado y control de la Bitácora de Auditoría en Tiempo Real
+window.renderAuditoriaTab = async function() {
+    const tbody = document.getElementById('audit-table-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr>
+        <td colspan="5" class="p-6 text-center text-slate-400">
+            <i class="fa-solid fa-spinner fa-spin mr-2"></i>Cargando bitácora desde Supabase PostgreSQL...
+        </td>
+    </tr>`;
+
+    try {
+        const logs = window.DIATDataService ? await window.DIATDataService.getAuditLogs(100) : [];
+        window._cachedAuditLogs = logs || [];
+        const countBadge = document.getElementById('badge-count-auditoria');
+        if (countBadge) countBadge.textContent = logs.length;
+        window.filterAuditLogs();
+    } catch(err) {
+        tbody.innerHTML = `<tr>
+            <td colspan="5" class="p-6 text-center text-red-500 font-bold">
+                <i class="fa-solid fa-triangle-exclamation mr-2"></i>No se pudieron cargar los registros de auditoría: ${err.message}
+            </td>
+        </tr>`;
+    }
+};
+
+window.filterAuditLogs = function() {
+    const tbody = document.getElementById('audit-table-body');
+    if (!tbody) return;
+
+    const query = (document.getElementById('audit-filter-search')?.value || '').toLowerCase().trim();
+    const typeFilter = document.getElementById('audit-filter-type')?.value || 'TODOS';
+
+    const logs = (window._cachedAuditLogs || []).filter(l => {
+        if (typeFilter !== 'TODOS' && l.tipo_evento !== typeFilter) return false;
+        if (!query) return true;
+        const u = (l.usuario_corto || '').toLowerCase();
+        const n = (l.nombre_usuario || '').toLowerCase();
+        const c = (l.convenio_id || '').toLowerCase();
+        const d = (l.descripcion || '').toLowerCase();
+        const t = (l.tipo_evento || '').toLowerCase();
+        return u.includes(query) || n.includes(query) || c.includes(query) || d.includes(query) || t.includes(query);
+    });
+
+    if (logs.length === 0) {
+        tbody.innerHTML = `<tr>
+            <td colspan="5" class="p-8 text-center text-slate-400">
+                <i class="fa-solid fa-folder-open text-2xl mb-2 text-slate-300 block"></i>
+                No se encontraron eventos de auditoría coincidentes.
+            </td>
+        </tr>`;
+        return;
+    }
+
+    const typeBadges = {
+        'INICIO_SESION': '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-right-to-bracket mr-1"></i>Login Exitoso</span>',
+        'LOGIN_FALLIDO': '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-100 text-red-800 border border-red-200"><i class="fa-solid fa-circle-xmark mr-1"></i>Login Fallido</span>',
+        'CAMBIO_PASSWORD': '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200"><i class="fa-solid fa-key mr-1"></i>Cambio Clave</span>',
+        'RESTABLECER_PASSWORD': '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200"><i class="fa-solid fa-rotate-left mr-1"></i>Reset Clave</span>',
+        'ACTUALIZACION_CONVENIO': '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200"><i class="fa-solid fa-pen-to-square mr-1"></i>Edición Convenio</span>',
+        'REGISTRO_VISITA': '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-100 text-teal-800 border border-teal-200"><i class="fa-solid fa-helmet-safety mr-1"></i>Nueva Visita</span>',
+        'ACTUALIZACION_VISITA': '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-cyan-100 text-cyan-800 border border-cyan-200"><i class="fa-solid fa-clipboard-check mr-1"></i>Visita Editada</span>',
+        'ELIMINACION_VISITA': '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-200"><i class="fa-solid fa-trash-can mr-1"></i>Visita Eliminada</span>'
+    };
+
+    tbody.innerHTML = logs.map(l => {
+        const d = new Date(l.fecha_hora);
+        const fStr = isNaN(d) ? (l.fecha_hora || 'Reciente') : d.toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'medium' });
+        const badge = typeBadges[l.tipo_evento] || `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700">${l.tipo_evento}</span>`;
+        const initials = (l.usuario_corto || 'SU').slice(0, 2).toUpperCase();
+        const convChip = l.convenio_id ? `<span class="font-mono px-2 py-0.5 bg-slate-100 rounded text-slate-800 font-bold">${l.convenio_id}</span>` : '<span class="text-slate-300">-</span>';
+        
+        let detailsHtml = `<div class="font-semibold text-slate-800">${l.descripcion || ''}</div>`;
+        if (l.detalles && typeof l.detalles === 'object' && Object.keys(l.detalles).length > 0) {
+            const jsonStr = JSON.stringify(l.detalles);
+            if (jsonStr !== '{}') {
+                detailsHtml += `<div class="text-[10px] text-slate-400 font-mono mt-0.5 truncate max-w-md" title='${jsonStr.replace(/'/g, "&apos;")}'>${jsonStr}</div>`;
+            }
+        }
+
+        return `<tr class="hover:bg-slate-50 transition">
+            <td class="p-3 text-slate-500 whitespace-nowrap font-mono text-[11px]">${fStr}</td>
+            <td class="p-3 whitespace-nowrap">
+                <div class="flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-emerald-700 text-white text-[9px] font-black flex items-center justify-center">${initials}</span>
+                    <div>
+                        <div class="font-bold text-slate-800">${l.nombre_usuario || l.usuario_corto}</div>
+                        <div class="text-[9.5px] text-slate-400 font-mono">${l.usuario_corto}</div>
+                    </div>
+                </div>
+            </td>
+            <td class="p-3 whitespace-nowrap">${badge}</td>
+            <td class="p-3 whitespace-nowrap">${convChip}</td>
+            <td class="p-3">${detailsHtml}</td>
+        </tr>`;
+    }).join('');
+};
 
 // Carga las alertas específicas del supervisor en el portal
 function renderSupervisorAlertas(supervisorRows) {
@@ -14979,28 +15994,31 @@ function initVisitasControl() {
         });
     }
 
-    // 6. Botón Maestro: CONTROL DE VISITAS (Abre el Centro de Control con clave DIAT2026)
+    // 6. Botón Maestro: CONTROL DE VISITAS (Abre el Centro de Control con credenciales de Administrador)
     const btnControlHub = document.getElementById('btn-vt-control-hub');
     if (btnControlHub) {
         btnControlHub.addEventListener('click', () => {
-            if (!checkOrPromptAuthPassword('ingresar al Centro de Control y Gestión de Visitas')) return;
-            window.openControlVisitasHub('registrar');
+            checkOrPromptAuthPassword('ingresar al Centro de Control y Gestión de Visitas', () => {
+                window.openControlVisitasHub('registrar');
+            });
         });
     }
 
     const btnProgramar = document.getElementById('btn-vt-programar-modal');
     if (btnProgramar) {
         btnProgramar.addEventListener('click', () => {
-            if (!checkOrPromptAuthPassword('programar una visita técnica')) return;
-            window.openControlVisitasHub('programar');
+            checkOrPromptAuthPassword('programar una visita técnica', () => {
+                window.openControlVisitasHub('programar');
+            });
         });
     }
 
     const btnRegistrar = document.getElementById('btn-vt-registrar-modal');
     if (btnRegistrar) {
         btnRegistrar.addEventListener('click', () => {
-            if (!checkOrPromptAuthPassword('registrar una visita técnica como realizada')) return;
-            window.openControlVisitasHub('registrar');
+            checkOrPromptAuthPassword('registrar una visita técnica como realizada', () => {
+                window.openControlVisitasHub('registrar');
+            });
         });
     }
 
@@ -16224,10 +17242,11 @@ function renderVisitasList(filteredVisits) {
 
                 // Miniatura de fotos
                 let photosMiniHtml = '';
-                if (v.photos && v.photos.length > 0) {
+                const vPhotos = (Array.isArray(v.photos) && v.photos.length > 0) ? v.photos : ((Array.isArray(v.fotos) && v.fotos.length > 0) ? v.fotos : []);
+                if (vPhotos.length > 0) {
                     photosMiniHtml = `
                         <div class="mt-3 grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-100">
-                            ${v.photos.slice(0, 4).map((p, idx) => `
+                            ${vPhotos.slice(0, 4).map((p, idx) => `
                                 <img src="${p}" class="w-full aspect-square object-cover rounded-lg border border-slate-200 cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all"
                                     onclick="event.stopPropagation(); window.openVisitPhotoLightbox('${v.id}', ${idx})" />
                             `).join('')}
@@ -16335,7 +17354,8 @@ function renderVisitasList(filteredVisits) {
                     window.openVisitDetailModal(v.id);
                 });
 
-                const photoCount = (v.photos && v.photos.length) || parseInt(v.photoCount) || 0;
+                const vPhotos = (Array.isArray(v.photos) && v.photos.length > 0) ? v.photos : ((Array.isArray(v.fotos) && v.fotos.length > 0) ? v.fotos : []);
+                const photoCount = vPhotos.length || parseInt(v.photoCount) || 0;
                 const clean = (typeof cleanMojibake === 'function') ? cleanMojibake : (s => s || '');
                 const uMunicipio = clean(v.municipio);
                 const uSubregion = clean(v.subregion);
@@ -16380,22 +17400,81 @@ function renderVisitasList(filteredVisits) {
     }
 }
 
-/**
- * Solicita y valida la clave de autorización para registrar visitas realizadas
- */
-function checkOrPromptAuthPassword(actionTitle = "acceder al Control de Visitas") {
-    // Si ya ha iniciado sesión como supervisor en el portal o se validó en esta sesión, permitir inmediatamente
-    const logged = getLoggedUser();
-    if (logged) return true;
-    if (window.diatAuthorizedSession) return true;
+let pendingAdminAuthCallback = null;
+let pendingAdminCancelCallback = null;
 
-    const entered = prompt(`🔐 AUTORIZACIÓN DIAT REQUERIDA\n\nPara ${actionTitle}, por favor ingrese la contraseña (DIAT2026):`);
-    if (entered === null) return false;
-    if (entered.trim().toUpperCase() === "DIAT2026") {
-        window.diatAuthorizedSession = true;
+window.openAdminAuthModal = function (onSuccess = null, onCancel = null) {
+    window.pendingAdminAuthCallback = onSuccess;
+    window.pendingAdminCancelCallback = onCancel;
+
+    const modal = document.getElementById('modal-admin-auth');
+    if (modal) {
+        modal.classList.remove('hidden');
+        const errEl = document.getElementById('admin-auth-error');
+        if (errEl) errEl.classList.add('hidden');
+        const uIn = document.getElementById('admin-auth-user');
+        const pIn = document.getElementById('admin-auth-password');
+        if (uIn) {
+            uIn.value = '';
+            setTimeout(() => uIn.focus(), 150);
+        }
+        if (pIn) pIn.value = '';
+    } else {
+        const u = prompt('🔐 CONTROL DE VISITAS - ACCESO ADMIN\n\nUsuario Administrador:');
+        if (!u) { if (onCancel) onCancel(); return; }
+        const p = prompt(`🔐 CONTROL DE VISITAS - ACCESO ADMIN\n\nContraseña de ${u}:`);
+        if (!p) { if (onCancel) onCancel(); return; }
+        (async () => {
+            try {
+                const authRes = await window.DIATDataService.loginUser(u, p);
+                const isAuth = authRes.success && authRes.user && (
+                    authRes.user.username === 'ADMIN' ||
+                    (authRes.user.role && authRes.user.role.toLowerCase().includes('administrador'))
+                );
+                if (isAuth) {
+                    window.diatAdminAuthorized = true;
+                    sessionStorage.setItem('diat_admin_authorized', 'true');
+                    alertToast('Acceso Autorizado', 'Bienvenido al Control de Visitas (ADMIN).');
+                    if (onSuccess) onSuccess();
+                } else {
+                    alertToast('Acceso Denegado', 'Credenciales de Administrador incorrectas o no autorizadas.', 'error');
+                    if (onCancel) onCancel();
+                }
+            } catch (err) {
+                alertToast('Error de Acceso', 'No fue posible validar credenciales de administrador.', 'error');
+                if (onCancel) onCancel();
+            }
+        })();
+    }
+};
+
+window.closeAdminAuthModal = function () {
+    const modal = document.getElementById('modal-admin-auth');
+    if (modal) modal.classList.add('hidden');
+    if (window.pendingAdminCancelCallback) {
+        window.pendingAdminCancelCallback();
+        window.pendingAdminCancelCallback = null;
+    }
+    window.pendingAdminAuthCallback = null;
+};
+
+/**
+ * Solicita y valida la autorización de administrador (Validación segura con Supabase)
+ */
+function checkOrPromptAuthPassword(actionTitle = "acceder al Control de Visitas", onSuccess = null) {
+    const logged = (typeof getLoggedUser === 'function') ? getLoggedUser() : null;
+    const isAlreadyAdmin = logged && (
+        logged.username === 'ADMIN' || 
+        (logged.role && logged.role.toLowerCase().includes('administrador'))
+    );
+
+    if (isAlreadyAdmin || window.diatAdminAuthorized || sessionStorage.getItem('diat_admin_authorized') === 'true') {
+        window.diatAdminAuthorized = true;
+        if (typeof onSuccess === 'function') onSuccess();
         return true;
     }
-    alertToast("Acceso Denegado", "Contraseña incorrecta. Se requiere la clave de autorización DIAT2026.", "error");
+
+    window.openAdminAuthModal(onSuccess);
     return false;
 }
 
@@ -16628,26 +17707,26 @@ window.startEditVisitFromHub = function (visitId) {
 };
 
 window.deleteVisitFromHub = async function (visitId) {
-    if (!checkOrPromptAuthPassword("eliminar una visita técnica")) return;
+    checkOrPromptAuthPassword("eliminar una visita técnica", async () => {
+        const visits = (window.DIATDataService ? window.DIATDataService.getTechnicalVisits() : []) || [];
+        const v = visits.find(item => item.id === visitId);
+        const conv = v ? v.convenioId : '';
+        const mun = v ? v.municipio : '';
 
-    const visits = (window.DIATDataService ? window.DIATDataService.getTechnicalVisits() : []) || [];
-    const v = visits.find(item => item.id === visitId);
-    const conv = v ? v.convenioId : '';
-    const mun = v ? v.municipio : '';
+        if (!confirm(`⚠️ ¿Está seguro de eliminar la visita técnica del Convenio ${conv} en ${mun}?\n\nEsta acción se sincronizará con la nube en tiempo real.`)) {
+            return;
+        }
 
-    if (!confirm(`⚠️ ¿Está seguro de eliminar la visita técnica del Convenio ${conv} en ${mun}?\n\nEsta acción se sincronizará con Google Drive en tiempo real.`)) {
-        return;
-    }
-
-    if (window.DIATDataService) {
-        alertToast("Eliminando...", `Sincronizando eliminación del Convenio ${conv} con Google Drive...`, "info");
-        await window.DIATDataService.deleteTechnicalVisit(visitId);
-        alertToast("Visita Eliminada", `Se ha eliminado la visita técnica del Convenio ${conv} en Google Drive y localmente.`, "success");
-        renderHubVisitsList();
-        if (typeof renderVisitasTab === 'function') renderVisitasTab();
-        if (typeof applyFilters === 'function') applyFilters();
-        if (typeof renderSupervisorPortal === 'function') renderSupervisorPortal();
-    }
+        if (window.DIATDataService) {
+            alertToast("Eliminando...", `Sincronizando eliminación del Convenio ${conv}...`, "info");
+            await window.DIATDataService.deleteTechnicalVisit(visitId);
+            alertToast("Visita Eliminada", `Se ha eliminado la visita técnica del Convenio ${conv} exitosamente.`, "success");
+            renderHubVisitsList();
+            if (typeof renderVisitasTab === 'function') renderVisitasTab();
+            if (typeof applyFilters === 'function') applyFilters();
+            if (typeof renderSupervisorPortal === 'function') renderSupervisorPortal();
+        }
+    });
 };
 
 function renderHubVisitsList() {
@@ -17400,23 +18479,23 @@ window.openConvenioModalFromVisit = function (convenioId) {
  * Marca una visita programada como realizada directamente (requiere clave DIAT2026)
  */
 window.markVisitAsCompleted = async function (visitId) {
-    if (!checkOrPromptAuthPassword("marcar la visita como realizada")) return;
+    checkOrPromptAuthPassword("marcar la visita como realizada", async () => {
+        const visits = (window.DIATDataService ? window.DIATDataService.getTechnicalVisits() : []) || [];
+        const v = visits.find(visit => visit.id === visitId);
+        if (!v) return;
 
-    const visits = (window.DIATDataService ? window.DIATDataService.getTechnicalVisits() : []) || [];
-    const v = visits.find(visit => visit.id === visitId);
-    if (!v) return;
+        const confirmAction = confirm(`¿Deseas marcar la visita programada del convenio ${v.convenioId} como REALIZADA hoy?`);
+        if (!confirmAction) return;
 
-    const confirmAction = confirm(`¿Deseas marcar la visita programada del convenio ${v.convenioId} como REALIZADA hoy?`);
-    if (!confirmAction) return;
-
-    if (window.DIATDataService) {
-        await window.DIATDataService.markVisitAsCompleted(visitId, {
-            fecha: new Date().toLocaleDateString('es-CO')
-        });
-        alertToast("Visita Completada", `La visita técnica de ${v.convenioId} ha sido marcada como Realizada.`);
-        renderVisitasTab();
-        if (typeof renderSupervisorPortal === 'function') renderSupervisorPortal();
-    }
+        if (window.DIATDataService) {
+            await window.DIATDataService.markVisitAsCompleted(visitId, {
+                fecha: new Date().toLocaleDateString('es-CO')
+            });
+            alertToast("Visita Completada", `La visita técnica de ${v.convenioId} ha sido marcada como Realizada.`);
+            renderVisitasTab();
+            if (typeof renderSupervisorPortal === 'function') renderSupervisorPortal();
+        }
+    });
 };
 
 /**

@@ -2789,34 +2789,39 @@ async function generateVectorMapAntioquiaSVG(filteredRows, svgWidth = 542, svgHe
         const totalMpios = mpioData.features.length || 125;
 
         // 6. Construir Markup SVG Completo y Optimizado
-        const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}" width="${svgWidth}" height="${svgHeight}">
-    <rect x="0" y="0" width="${svgWidth}" height="${svgHeight}" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1" />
-    
-    <!-- Grid sutil de coordenadas -->
-    <g stroke="#E2E8F0" stroke-width="0.5" stroke-dasharray="2,2">
-        <line x1="0" y1="45" x2="${svgWidth}" y2="45" />
-        <line x1="0" y1="90" x2="${svgWidth}" y2="90" />
-        <line x1="0" y1="135" x2="${svgWidth}" y2="135" />
-        <line x1="135" y1="0" x2="135" y2="${svgHeight}" />
-        <line x1="270" y1="0" x2="270" y2="${svgHeight}" />
-        <line x1="405" y1="0" x2="405" y2="${svgHeight}" />
+        let panelsSvg = '';
+        if (svgWidth <= 500) {
+            panelsSvg = `
+    <!-- Panel Superior Izquierdo: Título y Municipios -->
+    <rect x="6" y="6" width="138" height="38" rx="5" fill="#FFFFFF" fill-opacity="0.95" stroke="#E2E8F0" stroke-width="0.8" />
+    <rect x="10" y="10" width="3" height="12" rx="1.5" fill="#0B5640" />
+    <text x="16" y="18" font-family="Poppins, Arial, sans-serif" font-size="6" font-weight="bold" fill="#0B5640">DISTRIBUCIÓN TERRITORIAL</text>
+    <text x="16" y="27" font-family="Poppins, Arial, sans-serif" font-size="5.2" font-weight="bold" fill="#64748B">${impactedMuniCount} de ${totalMpios} Municipios</text>
+    <text x="16" y="36" font-family="Poppins, Arial, sans-serif" font-size="5" font-weight="bold" fill="#0B5640">${impactedConvs.size} Convenios en Mapa</text>
+
+    <!-- Panel Superior Derecho: Resumen de Cobertura y Rosa de los Vientos -->
+    <rect x="${svgWidth - 78}" y="6" width="72" height="38" rx="5" fill="#FFFFFF" fill-opacity="0.95" stroke="#E2E8F0" stroke-width="0.8" />
+    <text x="${svgWidth - 73}" y="15" font-family="Poppins, Arial, sans-serif" font-size="4.8" font-weight="bold" fill="#94A3B8">COBERTURA</text>
+    <text x="${svgWidth - 73}" y="27" font-family="Poppins, Arial, sans-serif" font-size="8.5" font-weight="bold" fill="#0B5640">${((impactedMuniCount / totalMpios) * 100).toFixed(1)}%</text>
+    <g transform="translate(${svgWidth - 24}, 12)">
+        <circle cx="6" cy="6" r="6" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="0.5" />
+        <polygon points="6,1.5 8,6 4,6" fill="#0B5640" />
+        <polygon points="6,10.5 8,6 4,6" fill="#94A3B8" />
+        <text x="5" y="0.5" font-family="Poppins, Arial, sans-serif" font-size="4" font-weight="bold" fill="#0B5640">N</text>
     </g>
 
-    <!-- Capa de Polígonos de Municipios -->
-    <g id="municipios-layer">
-        ${pathsSvg}
-    </g>
-
-    <!-- Capa de Trazados Viales KML en Verde Metálico Neón -->
-    <g id="tramos-lines-layer">
-        ${tramosLinesSvg}
-    </g>
-
-    <!-- Capa de Puntos Beacon KML Discretos -->
-    <g id="tramos-points-layer">
-        ${tramosPointsSvg}
-    </g>
-
+    <!-- Panel Inferior Izquierdo: Convenciones Compactas -->
+    <rect x="6" y="${svgHeight - 22}" width="160" height="16" rx="4" fill="#FFFFFF" fill-opacity="0.95" stroke="#E2E8F0" stroke-width="0.8" />
+    <rect x="10" y="${svgHeight - 17}" width="6" height="6" rx="1.5" fill="#0B5640" stroke="#043A2B" stroke-width="0.4" />
+    <text x="19" y="${svgHeight - 12}" font-family="Poppins, Arial, sans-serif" font-size="4.8" font-weight="bold" fill="#334155">Impactado (${impactedMuniCount})</text>
+    <rect x="70" y="${svgHeight - 17}" width="6" height="6" rx="1.5" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="0.4" />
+    <text x="79" y="${svgHeight - 12}" font-family="Poppins, Arial, sans-serif" font-size="4.8" font-weight="bold" fill="#64748B">Sin Conv.</text>
+    <circle cx="120" cy="${svgHeight - 14}" r="1.5" fill="#00E676" stroke="#043A2B" stroke-width="0.4" />
+    <line x1="123" y1="${svgHeight - 14}" x2="130" y2="${svgHeight - 14}" stroke="#00E676" stroke-width="1.2" />
+    <text x="133" y="${svgHeight - 12}" font-family="Poppins, Arial, sans-serif" font-size="4.8" font-weight="bold" fill="#0B5640">KML</text>
+`;
+        } else {
+            panelsSvg = `
     <!-- Panel Lateral Izquierdo: Título y Convenciones (Sin tapar el mapa) -->
     <rect x="8" y="8" width="145" height="90" rx="6" fill="#FFFFFF" fill-opacity="0.95" stroke="#E2E8F0" stroke-width="0.8" />
     
@@ -2855,6 +2860,40 @@ async function generateVectorMapAntioquiaSVG(filteredRows, svgWidth = 542, svgHe
         <polygon points="8,14 10.5,8 5.5,8" fill="#94A3B8" />
         <text x="6.5" y="0.5" font-family="Poppins, Arial, sans-serif" font-size="5" font-weight="bold" fill="#0B5640">N</text>
     </g>
+`;
+        }
+
+        const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}" width="${svgWidth}" height="${svgHeight}">
+    <rect x="0" y="0" width="${svgWidth}" height="${svgHeight}" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1" />
+    
+    <!-- Grid sutil de coordenadas -->
+    <g stroke="#E2E8F0" stroke-width="0.5" stroke-dasharray="2,2">
+        <line x1="0" y1="45" x2="${svgWidth}" y2="45" />
+        <line x1="0" y1="90" x2="${svgWidth}" y2="90" />
+        <line x1="0" y1="135" x2="${svgWidth}" y2="135" />
+        <line x1="135" y1="0" x2="135" y2="${svgHeight}" />
+        <line x1="270" y1="0" x2="270" y2="${svgHeight}" />
+        <line x1="405" y1="0" x2="405" y2="${svgHeight}" />
+        <line x1="540" y1="0" x2="540" y2="${svgHeight}" />
+        <line x1="675" y1="0" x2="675" y2="${svgHeight}" />
+    </g>
+
+    <!-- Capa de Polígonos de Municipios -->
+    <g id="municipios-layer">
+        ${pathsSvg}
+    </g>
+
+    <!-- Capa de Trazados Viales KML en Verde Metálico Neón -->
+    <g id="tramos-lines-layer">
+        ${tramosLinesSvg}
+    </g>
+
+    <!-- Capa de Puntos Beacon KML Discretos -->
+    <g id="tramos-points-layer">
+        ${tramosPointsSvg}
+    </g>
+
+    ${panelsSvg}
 </svg>`;
 
         return svgMarkup;
@@ -2927,13 +2966,13 @@ async function generateResumenPDF() {
             totAreEje += getRowAreaEjecutada(r);
         });
 
-        // 3. Fetch institutional logo & Generate Vector Map
+        // 3. Fetch institutional logo & Generate Vector Map (Width 370, Height 205 for left half of landscape page)
         const [logoBase64, mapSvgMarkup] = await Promise.all([
             getBase64ImageFromURL('./assets/escudo_antioquia.png').catch(() => null),
-            generateVectorMapAntioquiaSVG(filteredData, 542, 220).catch(() => null)
+            generateVectorMapAntioquiaSVG(filteredData, 370, 205).catch(() => null)
         ]);
 
-        // 4. Generate native pdfMake vector chart for a premium, clean presentation
+        // 4. Generate native pdfMake vector charts stacked vertically on the right half
         const maxVal = Math.max(totLonCon, totLonEje);
         const chartHeight = 80;
 
@@ -2954,108 +2993,183 @@ async function generateResumenPDF() {
             return '$' + Math.round(val / 1000000).toLocaleString('es-CO') + ' M';
         };
 
-        const chartSection = {
+        // Helper para tarjetas KPI compactas en el costado derecho
+        const makeKpiMiniCard = (title, count, titleColor, countColor, bg, borderColor) => ({
             table: {
-                widths: ['*', 12, '*'],
+                widths: ['*'],
+                body: [[
+                    {
+                        stack: [
+                            { text: title, fontSize: 6.2, bold: true, color: titleColor },
+                            { text: String(count), fontSize: 11.5, bold: true, color: countColor, margin: [0, 1, 0, 0] }
+                        ],
+                        fillColor: bg,
+                        margin: [6, 3, 6, 3]
+                    }
+                ]]
+            },
+            layout: {
+                hLineWidth: () => 1, vLineWidth: () => 1,
+                hLineColor: () => borderColor, vLineColor: () => borderColor,
+                paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 0, paddingBottom: () => 0
+            }
+        });
+
+        const kpiGrid = {
+            stack: [
+                {
+                    columns: [
+                        makeKpiMiniCard('TOTAL CONVENIOS', filteredData.length, '#64748B', '#1E293B', '#F8FAFC', '#E2E8F0'),
+                        { width: 6, text: '' },
+                        makeKpiMiniCard('EN EJECUCIÓN', activos, '#018D38', '#018D38', '#E6F4EA', '#CEEAD6')
+                    ],
+                    margin: [0, 0, 0, 4]
+                },
+                {
+                    columns: [
+                        makeKpiMiniCard('SUSPENDIDOS', suspendidos, '#C5221F', '#C5221F', '#FCE8E6', '#FAD2CF'),
+                        { width: 6, text: '' },
+                        makeKpiMiniCard('POR LIQUIDAR', porLiquidar, '#C2410C', '#C2410C', '#FFEFE0', '#FFD8A8')
+                    ]
+                }
+            ]
+        };
+
+        // Barras de avance compactas y sutiles (sin restar protagonismo al mapa)
+        const vialChartCard = {
+            table: {
+                widths: ['*'],
                 body: [
                     [
-                        // Vial Chart Column (Barra de progreso horizontal apilada)
                         {
                             stack: [
-                                { text: 'RELACIÓN DE ALCANCE VIAL: CONTRATADO VS EJECUTADO', fontSize: 7, bold: true, color: '#1A6B3C', alignment: 'left', margin: [0, 2, 0, 8] },
                                 {
                                     columns: [
-                                        { text: 'AVANCE DE EJECUCIÓN', fontSize: 6, bold: true, color: '#10B981' },
-                                        { text: `${pctEje}%`, fontSize: 13, bold: true, color: '#10B981', alignment: 'right' }
+                                        { text: 'RELACIÓN DE ALCANCE VIAL', fontSize: 6.2, bold: true, color: '#1A6B3C' },
+                                        { text: `${pctEje}%`, fontSize: 8.5, bold: true, color: '#10B981', alignment: 'right' }
                                     ],
-                                    margin: [0, 0, 0, 4]
+                                    margin: [0, 0, 0, 2]
                                 },
                                 {
                                     canvas: [
-                                        { type: 'rect', x: 0, y: 0, w: 230, h: 18, color: '#E2E8F0', r: 5 },
-                                        { type: 'rect', x: 0, y: 0, w: Math.round(230 * Math.min(Number(pctEje) / 100, 1)), h: 18, color: '#10B981', r: 5 }
+                                        { type: 'rect', x: 0, y: 0, w: 326, h: 5.5, color: '#E2E8F0', r: 2.5 },
+                                        { type: 'rect', x: 0, y: 0, w: Math.round(326 * Math.min(Number(pctEje) / 100, 1)), h: 5.5, color: '#10B981', r: 2.5 }
                                     ],
-                                    margin: [0, 0, 0, 6]
+                                    margin: [0, 0, 0, 2]
                                 },
                                 {
                                     columns: [
-                                        { text: `Ejecutado: ${valEjeKm} km`, fontSize: 7.5, bold: true, color: '#10B981' },
-                                        { text: `Total Contratado: ${valConKm} km`, fontSize: 7.5, bold: true, color: '#64748B', alignment: 'right' }
+                                        { text: `Ejecutado: ${valEjeKm} km`, fontSize: 6.5, bold: true, color: '#10B981' },
+                                        { text: `Total Contratado: ${valConKm} km`, fontSize: 6.5, color: '#64748B', alignment: 'right' }
                                     ]
                                 }
                             ],
                             fillColor: '#F8FAFC',
-                            margin: [6, 6, 6, 6],
-                            border: [true, true, true, true]
-                        },
-                        // Spacer
-                        {
-                            text: '',
-                            border: [false, false, false, false]
-                        },
-                        // Financial Chart Column (Barra de progreso horizontal apilada)
-                        {
-                            stack: [
-                                { text: 'COMPARATIVO FINANCIERO: INVERSIÓN VS AUTORIZADO', fontSize: 7, bold: true, color: '#1A6B3C', alignment: 'left', margin: [0, 2, 0, 8] },
-                                {
-                                    columns: [
-                                        { text: 'RECURSOS AUTORIZADOS SIF', fontSize: 6, bold: true, color: '#1A6B3C' },
-                                        { text: `${pctAut}%`, fontSize: 13, bold: true, color: '#1A6B3C', alignment: 'right' }
-                                    ],
-                                    margin: [0, 0, 0, 4]
-                                },
-                                {
-                                    canvas: [
-                                        { type: 'rect', x: 0, y: 0, w: 230, h: 18, color: '#E2E8F0', r: 5 },
-                                        { type: 'rect', x: 0, y: 0, w: Math.round(230 * Math.min(Number(pctAut) / 100, 1)), h: 18, color: '#1A6B3C', r: 5 }
-                                    ],
-                                    margin: [0, 0, 0, 6]
-                                },
-                                {
-                                    columns: [
-                                        { text: `Autorizado: ${formatShortCurrency(sumAut)}`, fontSize: 7.5, bold: true, color: '#1A6B3C' },
-                                        { text: `Inversión: ${formatShortCurrency(sumInv)}`, fontSize: 7.5, bold: true, color: '#64748B', alignment: 'right' }
-                                    ]
-                                }
-                            ],
-                            fillColor: '#F8FAFC',
-                            margin: [6, 6, 6, 6],
-                            border: [true, true, true, true]
+                            margin: [6, 3.5, 6, 3.5]
                         }
                     ]
                 ]
             },
             layout: {
-                hLineWidth: () => 1,
-                vLineWidth: () => 1,
-                hLineColor: () => '#E2E8F0',
-                vLineColor: () => '#E2E8F0',
-                paddingLeft: () => 0,
-                paddingRight: () => 0,
-                paddingTop: () => 0,
-                paddingBottom: () => 0
+                hLineWidth: () => 1, vLineWidth: () => 1, hLineColor: () => '#E2E8F0', vLineColor: () => '#E2E8F0',
+                paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 0, paddingBottom: () => 0
             },
-            margin: [0, 0, 0, 10]
+            margin: [0, 0, 0, 4]
         };
 
-        // 5. Build the detailed convenios table
+        const finChartCard = {
+            table: {
+                widths: ['*'],
+                body: [
+                    [
+                        {
+                            stack: [
+                                {
+                                    columns: [
+                                        { text: 'COMPARATIVO FINANCIERO', fontSize: 6.2, bold: true, color: '#1A6B3C' },
+                                        { text: `${pctAut}%`, fontSize: 8.5, bold: true, color: '#1A6B3C', alignment: 'right' }
+                                    ],
+                                    margin: [0, 0, 0, 2]
+                                },
+                                {
+                                    canvas: [
+                                        { type: 'rect', x: 0, y: 0, w: 326, h: 5.5, color: '#E2E8F0', r: 2.5 },
+                                        { type: 'rect', x: 0, y: 0, w: Math.round(326 * Math.min(Number(pctAut) / 100, 1)), h: 5.5, color: '#1A6B3C', r: 2.5 }
+                                    ],
+                                    margin: [0, 0, 0, 2]
+                                },
+                                {
+                                    columns: [
+                                        { text: `Autorizado: ${formatShortCurrency(sumAut)}`, fontSize: 6.5, bold: true, color: '#1A6B3C' },
+                                        { text: `Inversión: ${formatShortCurrency(sumInv)}`, fontSize: 6.5, color: '#64748B', alignment: 'right' }
+                                    ]
+                                }
+                            ],
+                            fillColor: '#F8FAFC',
+                            margin: [6, 3.5, 6, 3.5]
+                        }
+                    ]
+                ]
+            },
+            layout: {
+                hLineWidth: () => 1, vLineWidth: () => 1, hLineColor: () => '#E2E8F0', vLineColor: () => '#E2E8F0',
+                paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 0, paddingBottom: () => 0
+            }
+        };
+
+        const midVisualSection = {
+            columns: [
+                // Columna Izquierda: Mapa de Antioquia con mayor altura y prominencia
+                {
+                    width: 370,
+                    stack: [
+                        mapSvgMarkup ? {
+                            svg: mapSvgMarkup,
+                            width: 370,
+                            alignment: 'center'
+                        } : { text: '' }
+                    ]
+                },
+                // Espaciador entre columnas
+                {
+                    width: 12,
+                    text: ''
+                },
+                // Columna Derecha: 4 Fichas de Estado + 2 Barras de Avance Compactas
+                {
+                    width: 340,
+                    stack: [
+                        { text: 'INDICADORES CLAVE DE ESTADO', fontSize: 6.8, bold: true, color: '#475569', letterSpacing: 0.5, margin: [0, 0, 0, 4] },
+                        kpiGrid,
+                        { text: 'CONSOLIDADO DE AVANCES Y RECURSOS', fontSize: 6.8, bold: true, color: '#475569', letterSpacing: 0.5, margin: [0, 5, 0, 4] },
+                        vialChartCard,
+                        finChartCard
+                    ]
+                }
+            ],
+            margin: [0, 0, 0, 8]
+        };
+
+        // 5. Build the detailed convenios table (9 Columns)
         const tableBody = [
             // Header Row
             [
                 { text: 'CONVENIO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5 },
-                { text: 'CONVENIENTE EJECUTOR', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5 },
+                { text: 'CONVENIANTE EJECUTOR', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5 },
                 { text: 'CLASIFICACIÓN / INDICADOR', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.2 },
+                { text: 'ALCANCE', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.2, alignment: 'right' },
                 { text: 'SUPERVISOR', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5 },
                 { text: 'ESTADO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5, alignment: 'center' },
-                { text: 'AV. FÍSICO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5, alignment: 'right' },
-                { text: 'AV. FINANCIERO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5, alignment: 'right' }
+                { text: 'APORTE DEPARTAMENTO /\nVALOR AUTORIZADO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.2, alignment: 'right' },
+                { text: 'AV. FÍSICO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.2, alignment: 'right' },
+                { text: 'AV. FINANCIERO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.0, alignment: 'right' }
             ]
         ];
 
         if (filteredData.length === 0) {
             tableBody.push([
-                { text: 'No se encontraron convenios con los filtros seleccionados.', colSpan: 7, alignment: 'center', fontSize: 8, italics: true },
-                {}, {}, {}, {}, {}, {}
+                { text: 'No se encontraron convenios con los filtros seleccionados.', colSpan: 9, alignment: 'center', fontSize: 8, italics: true },
+                {}, {}, {}, {}, {}, {}, {}, {}
             ]);
         } else {
             filteredData.forEach(r => {
@@ -3114,14 +3228,104 @@ async function generateResumenPDF() {
                     clasifCell = { text: 'N/A', fontSize: 6.8, color: '#94A3B8' };
                 }
 
+                // Columna ALCANCE (Metros o Metros Cuadrados)
+                const alcM = getRowLongitudContratada(r);
+                const alcM2 = getRowAreaContratada(r);
+                let alcCell = {};
+                if (alcM > 0 && alcM2 > 0) {
+                    alcCell = {
+                        stack: [
+                            { text: `${alcM.toLocaleString('es-CO')} m`, fontSize: 7.2, bold: true, color: '#1E293B' },
+                            { text: `${alcM2.toLocaleString('es-CO')} m²`, fontSize: 6.3, color: '#0284C7', bold: true, margin: [0, 1, 0, 0] }
+                        ],
+                        alignment: 'right'
+                    };
+                } else if (alcM > 0) {
+                    alcCell = {
+                        text: `${alcM.toLocaleString('es-CO')} m`,
+                        fontSize: 7.2,
+                        bold: true,
+                        color: '#1E293B',
+                        alignment: 'right'
+                    };
+                } else if (alcM2 > 0) {
+                    alcCell = {
+                        text: `${alcM2.toLocaleString('es-CO')} m²`,
+                        fontSize: 7.2,
+                        bold: true,
+                        color: '#0284C7',
+                        alignment: 'right'
+                    };
+                } else {
+                    alcCell = {
+                        text: '-',
+                        fontSize: 7,
+                        color: '#94A3B8',
+                        alignment: 'center'
+                    };
+                }
+
+                // Columna APORTE DEPARTAMENTO / VALOR AUTORIZADO
+                const apDepto = (parseFloat(r['APORTE DEPARTAMENTO']) || 0) + (parseFloat(r['ADICION DEPARTAMENTO']) || 0);
+                const autDepto = parseFloat(r['VALOR TOTAL AUTORIZADO DEPARTAMENTO'] || r['VALOR TOTAL AUTORIZADO']) || 0;
+                const formatCOP = (val) => {
+                    if (!val || val === 0) return '$ 0';
+                    return '$ ' + Number(val).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                };
+
+                const aporteCell = {
+                    stack: [
+                        { text: `Aporte Departamento: ${formatCOP(apDepto)}`, fontSize: 7.5, bold: true, color: '#0F172A' },
+                        { text: `Valor Autorizado: ${formatCOP(autDepto)}`, fontSize: 7.2, color: '#047857', bold: true, margin: [0, 2, 0, 0] }
+                    ],
+                    alignment: 'right'
+                };
+
+                // Barras horizontales de avance físico y financiero
+                const makeMiniProgressBar = (pct, barColor, totalWidth = 52) => {
+                    const rawVal = Number(pct) || 0;
+                    const clampedVal = Math.max(0, Math.min(100, rawVal));
+                    const fillW = Math.round((clampedVal / 100) * totalWidth);
+                    const canvasElements = [
+                        { type: 'rect', x: 0, y: 0, w: totalWidth, h: 4, color: '#E2E8F0', r: 2 }
+                    ];
+                    if (fillW > 0) {
+                        canvasElements.push({
+                            type: 'rect',
+                            x: 0,
+                            y: 0,
+                            w: Math.max(fillW, 3),
+                            h: 4,
+                            color: barColor,
+                            r: 2
+                        });
+                    }
+                    return {
+                        stack: [
+                            { text: `${rawVal.toFixed(1)}%`, fontSize: 7.2, bold: true, color: '#1E293B', alignment: 'right' },
+                            {
+                                canvas: canvasElements,
+                                alignment: 'right',
+                                margin: [0, 2, 0, 0]
+                            }
+                        ],
+                        alignment: 'right'
+                    };
+                };
+
+                const cellFisico = makeMiniProgressBar(pfis, '#10B981', 52);
+                const cellFinanciero = makeMiniProgressBar(pfin, '#1A6B3C', 52);
+
                 tableBody.push([
                     { text: String(r['CONVENIO'] || ''), fontSize: 7.5, bold: true },
                     muniCellContent,
                     clasifCell,
+                    alcCell,
                     { text: String(r['SUPERVISOR'] || 'SIN ASIGNAR'), fontSize: 7 },
                     { text: sysState.label, fontSize: 7, bold: true, color: badgeColor, fillColor: badgeBg, alignment: 'center' },
-                    { text: pfis.toFixed(1) + '%', fontSize: 7.5, alignment: 'right', bold: true },
-                    { text: pfin.toFixed(1) + '%', fontSize: 7.5, alignment: 'right', bold: true }
+                    aporteCell,
+                    cellFisico,
+                    cellFinanciero
                 ]);
             });
         }
@@ -3129,8 +3333,8 @@ async function generateResumenPDF() {
         // 6. Define the PDF Document
         const docDefinition = {
             pageSize: 'LETTER',
-            pageOrientation: 'portrait',
-            pageMargins: [35, 30, 35, 30],
+            pageOrientation: 'landscape',
+            pageMargins: [35, 25, 35, 25],
             defaultStyle: {
                 font: 'Poppins',
                 fontSize: 8.5,
@@ -3156,8 +3360,8 @@ async function generateResumenPDF() {
                         },
                         {
                             stack: [
-                                { text: 'REPORTE GERENCIAL CONSOLIDADO', fontSize: 9, bold: true, color: '#1A6B3C', alignment: 'right' },
-                                { text: 'RESUMEN EJECUTIVO', fontSize: 7.5, bold: true, color: '#64748B', alignment: 'right' },
+                                { text: 'REPORTE GERENCIAL CONSOLIDADO', fontSize: 9.5, bold: true, color: '#1A6B3C', alignment: 'right' },
+                                { text: 'RESUMEN EJECUTIVO - INFRAESTRUCTURA VIAL', fontSize: 7.5, bold: true, color: '#64748B', alignment: 'right' },
                                 { text: `Generado: ${new Date().toLocaleDateString('es-CO')} ${new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`, fontSize: 7, color: '#94A3B8', alignment: 'right' }
                             ],
                             width: 'auto'
@@ -3167,8 +3371,8 @@ async function generateResumenPDF() {
                 },
                 // Divider Line
                 {
-                    canvas: [{ type: 'line', x1: 0, y1: 0, x2: 542, y2: 0, lineWidth: 1.5, lineColor: '#1A6B3C' }],
-                    margin: [0, 0, 0, 10]
+                    canvas: [{ type: 'line', x1: 0, y1: 0, x2: 722, y2: 0, lineWidth: 1.5, lineColor: '#1A6B3C' }],
+                    margin: [0, 0, 0, 8]
                 },
                 // Active Filters Context Callout
                 {
@@ -3183,123 +3387,22 @@ async function generateResumenPDF() {
                                     ],
                                     fillColor: '#F8FAFC',
                                     border: [false, false, false, false],
-                                    margin: [8, 6, 8, 6]
+                                    margin: [8, 5, 8, 5]
                                 }
                             ]
                         ]
                     },
-                    margin: [0, 0, 0, 10]
+                    margin: [0, 0, 0, 8]
                 },
-                // KPI Summary Grid (4 columns, single row)
-                {
-                    columns: [
-                        // Col 1: TOTAL CONVENIOS
-                        {
-                            table: {
-                                widths: ['*'],
-                                body: [
-                                    [
-                                        {
-                                            stack: [
-                                                { text: 'TOTAL CONVENIOS', fontSize: 6.5, bold: true, color: '#64748B' },
-                                                { text: String(filteredData.length), fontSize: 13, bold: true, color: '#1E293B', margin: [0, 1, 0, 0] }
-                                            ],
-                                            fillColor: '#F8FAFC'
-                                        }
-                                    ]
-                                ]
-                            },
-                            layout: {
-                                hLineWidth: () => 1, vLineWidth: () => 1, hLineColor: () => '#E2E8F0', vLineColor: () => '#E2E8F0',
-                                paddingLeft: () => 8, paddingRight: () => 8, paddingTop: () => 4, paddingBottom: () => 4
-                            },
-                            margin: [0, 0, 2, 0]
-                        },
-                        // Col 2: EN EJECUCIÓN
-                        {
-                            table: {
-                                widths: ['*'],
-                                body: [
-                                    [
-                                        {
-                                            stack: [
-                                                { text: 'EN EJECUCIÓN', fontSize: 6.5, bold: true, color: '#018D38' },
-                                                { text: String(activos), fontSize: 13, bold: true, color: '#018D38', margin: [0, 1, 0, 0] }
-                                            ],
-                                            fillColor: '#E6F4EA'
-                                        }
-                                    ]
-                                ]
-                            },
-                            layout: {
-                                hLineWidth: () => 1, vLineWidth: () => 1, hLineColor: () => '#CEEAD6', vLineColor: () => '#CEEAD6',
-                                paddingLeft: () => 8, paddingRight: () => 8, paddingTop: () => 4, paddingBottom: () => 4
-                            },
-                            margin: [2, 0, 2, 0]
-                        },
-                        // Col 3: SUSPENDIDOS
-                        {
-                            table: {
-                                widths: ['*'],
-                                body: [
-                                    [
-                                        {
-                                            stack: [
-                                                { text: 'SUSPENDIDOS', fontSize: 6.5, bold: true, color: '#C5221F' },
-                                                { text: String(suspendidos), fontSize: 13, bold: true, color: '#C5221F', margin: [0, 1, 0, 0] }
-                                            ],
-                                            fillColor: '#FCE8E6'
-                                        }
-                                    ]
-                                ]
-                            },
-                            layout: {
-                                hLineWidth: () => 1, vLineWidth: () => 1, hLineColor: () => '#FAD2CF', vLineColor: () => '#FAD2CF',
-                                paddingLeft: () => 8, paddingRight: () => 8, paddingTop: () => 4, paddingBottom: () => 4
-                            },
-                            margin: [2, 0, 2, 0]
-                        },
-                        // Col 4: POR LIQUIDAR
-                        {
-                            table: {
-                                widths: ['*'],
-                                body: [
-                                    [
-                                        {
-                                            stack: [
-                                                { text: 'POR LIQUIDAR', fontSize: 6.5, bold: true, color: '#C2410C' },
-                                                { text: String(porLiquidar), fontSize: 13, bold: true, color: '#C2410C', margin: [0, 1, 0, 0] }
-                                            ],
-                                            fillColor: '#FFEFE0'
-                                        }
-                                    ]
-                                ]
-                            },
-                            layout: {
-                                hLineWidth: () => 1, vLineWidth: () => 1, hLineColor: () => '#FFD8A8', vLineColor: () => '#FFD8A8',
-                                paddingLeft: () => 8, paddingRight: () => 8, paddingTop: () => 4, paddingBottom: () => 4
-                            },
-                            margin: [2, 0, 0, 0]
-                        }
-                    ],
-                    margin: [0, 0, 0, 10]
-                },
-                // Mapa Territorial Vectorial de Antioquia
-                mapSvgMarkup ? {
-                    svg: mapSvgMarkup,
-                    width: 542,
-                    alignment: 'center',
-                    margin: [0, 0, 0, 10]
-                } : { text: '' },
-                // Premium Charts Section (Alcance Vial and Comparativo Financiero side-by-side)
-                chartSection,
+                // Sección Visual Central: Mapa de Antioquia (Izquierda) + Fichas de Estado y Barras Compactas (Derecha)
+                midVisualSection,
                 // Detailed Table Header
                 { text: `LISTADO DETALLADO DE CONVENIOS FILTRADOS (${filteredData.length})`, fontSize: 7.5, bold: true, color: '#475569', letterSpacing: 0.5, margin: [0, 0, 0, 4] },
                 // Detailed Table
                 {
                     table: {
                         headerRows: 1,
-                        widths: ['auto', '*', 'auto', 'auto', 'auto', 48, 52],
+                        widths: [52, '*', 68, 50, 78, 50, 175, 62, 62],
                         body: tableBody
                     },
                     layout: {
@@ -3307,10 +3410,10 @@ async function generateResumenPDF() {
                         vLineWidth: () => 0.5,
                         hLineColor: (i) => i === 0 ? '#0B5640' : '#E2E8F0',
                         vLineColor: () => '#E2E8F0',
-                        paddingLeft: () => 5,
-                        paddingRight: () => 5,
-                        paddingTop: () => 4,
-                        paddingBottom: () => 4
+                        paddingLeft: () => 4,
+                        paddingRight: () => 4,
+                        paddingTop: () => 3.5,
+                        paddingBottom: () => 3.5
                     }
                 },
                 // Footer
@@ -3319,7 +3422,7 @@ async function generateResumenPDF() {
                     fontSize: 6.5,
                     color: '#94A3B8',
                     alignment: 'center',
-                    margin: [0, 15, 0, 0],
+                    margin: [0, 12, 0, 0],
                     unbreakable: true
                 }
             ]

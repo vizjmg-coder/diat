@@ -6594,7 +6594,15 @@ function openModal(row) {
     setTimeout(updateGalleryVisibility, 2000);
 }
 
-function closeModal() { document.getElementById('modal-detalle').classList.add('hidden'); document.body.style.overflow = 'auto'; }
+function closeModal() {
+    document.getElementById('modal-detalle').classList.add('hidden');
+    const indModal = document.getElementById('modal-indicador-detalle');
+    if (indModal && !indModal.classList.contains('hidden') && indModal.style.display !== 'none') {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = 'auto';
+    }
+}
 function openLightbox(i) { currentImageIndex = i; updateLightbox(); document.getElementById('modal-lightbox').classList.remove('hidden'); }
 function closeLightbox() { document.getElementById('modal-lightbox').classList.add('hidden'); }
 function updateLightbox() {
@@ -9025,7 +9033,7 @@ window.openIndicadorDetailModal = function (indKey) {
         valCuatrenioSubStr = 'Aporte en unidades al Cuatrienio';
     }
 
-    const pctCumplido = metaCuatrienio > 0 ? Math.min((valAlcanceTotalNum / metaCuatrienio) * 100, 100) : 0;
+    const pctCumplido = metaCuatrienio > 0 ? (valCuatrenioNum / metaCuatrienio) * 100 : 0;
     if (badgeCumplimiento) {
         badgeCumplimiento.textContent = `${pctCumplido.toFixed(1)}% Cumplido`;
     }
@@ -9038,7 +9046,7 @@ window.openIndicadorDetailModal = function (indKey) {
     if (kpiCuatrenioSub) kpiCuatrenioSub.textContent = valCuatrenioSubStr;
     if (kpiInversion) kpiInversion.textContent = formatCurrency(totalInversion);
 
-    const restante = Math.max(metaCuatrienio - valAlcanceTotalNum, 0);
+    const restante = Math.max(metaCuatrienio - valCuatrenioNum, 0);
     if (kpiMetaRestante) {
         const resFmt = cfg.tipo === 'km' ? `${restante.toFixed(2)} km` : (cfg.tipo === 'm2' ? formatNumber(Math.round(restante)) + ' m²' : `${restante} und`);
         kpiMetaRestante.textContent = `Restante: ${resFmt}`;
@@ -9139,7 +9147,10 @@ window.openIndicadorDetailModal = function (indKey) {
             }
 
             const sysState = getSystemState(row['ESTADO CONVENIO']);
-            const fisPct = Math.round(parseNum(row['FISICO_NORM']) || parseNum(row['% EJECUCION FISICA']) || 0);
+            const fisVal = parseNum(row['FISICO_NORM']) || parseNum(row['% EJECUCION FISICA']) || 0;
+            const finVal = parseNum(row['FINANCIERO_NORM']) || parseNum(row['% EJECUCION FINANCIERA (RECURSOS DEPARTAMENTO)']) || parseNum(row['% EJECUCION FINANCIERA']) || 0;
+            const fisText = fisVal % 1 === 0 ? `${fisVal.toFixed(0)}%` : `${fisVal.toFixed(1)}%`;
+            const finText = finVal % 1 === 0 ? `${finVal.toFixed(0)}%` : `${finVal.toFixed(1)}%`;
 
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50/80 transition-colors cursor-pointer group";
@@ -9160,20 +9171,31 @@ window.openIndicadorDetailModal = function (indKey) {
                     </div>
                     <div class="text-[10px] text-slate-400 font-medium mt-0.5" title="${via}">Inv: ${formatCurrency(inv)}</div>
                 </td>
-                <td class="py-2.5 px-3 text-right">
-                    ${rowAlcanceTotalStr}
+                <td class="py-2.5 px-3 text-center">
+                    <span class="badge-estado ${sysState.badgeClass} text-[9.5px] py-0.5 px-2 font-bold whitespace-nowrap shadow-xs inline-block">${sysState.label}</span>
                 </td>
                 <td class="py-2.5 px-3 text-right bg-amber-50/40 border-x border-amber-200/40">
                     ${rowAlcanceCuatrenioStr}
                 </td>
-                <td class="py-2.5 px-3 text-center">
-                    <div class="inline-flex items-center gap-1.5">
-                        <span class="font-bold text-[11px] text-slate-800">${fisPct}%</span>
-                        <div class="w-12 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                            <div class="h-full bg-emerald-600 rounded-full" style="width: ${Math.min(fisPct, 100)}%"></div>
+                <td class="py-2.5 px-3">
+                    <div class="flex flex-col gap-1 min-w-[110px] max-w-[140px] mx-auto">
+                        <!-- Físico -->
+                        <div class="flex items-center justify-between gap-1 text-[10px]">
+                            <span class="text-[9px] font-bold text-slate-500 uppercase">Fís:</span>
+                            <span class="font-bold text-slate-800 font-mono">${fisText}</span>
+                            <div class="w-12 h-1.5 bg-slate-200 rounded-full overflow-hidden shrink-0">
+                                <div class="h-full bg-emerald-600 rounded-full" style="width: ${Math.min(Math.max(fisVal, 0), 100)}%"></div>
+                            </div>
+                        </div>
+                        <!-- Financiero -->
+                        <div class="flex items-center justify-between gap-1 text-[10px]">
+                            <span class="text-[9px] font-bold text-slate-500 uppercase">Fin:</span>
+                            <span class="font-bold text-blue-700 font-mono">${finText}</span>
+                            <div class="w-12 h-1.5 bg-slate-200 rounded-full overflow-hidden shrink-0">
+                                <div class="h-full bg-blue-600 rounded-full" style="width: ${Math.min(Math.max(finVal, 0), 100)}%"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="mt-0.5"><span class="badge-estado ${sysState.badgeClass} text-[9px] py-0 px-1.5">${sysState.label}</span></div>
                 </td>
                 <td class="py-2.5 px-3 text-center">
                     <button type="button" class="btn-ver-ficha-conv px-2.5 py-1 bg-slate-100 hover:bg-institutional-primary hover:text-white text-slate-700 font-bold rounded text-[11px] transition-all shadow-xs" title="Ver ficha técnica completa">
@@ -9198,11 +9220,8 @@ window.openIndicadorDetailModal = function (indKey) {
 
             tableFooter.innerHTML = `
                 <tr>
-                    <td colspan="3" class="py-3 px-3 text-slate-800 uppercase tracking-wider text-[11px]">
+                    <td colspan="4" class="py-3 px-3 text-slate-800 uppercase tracking-wider text-[11px]">
                         TOTAL CONSOLIDADO (${filtered.length} Convenios) • Inversión: ${formatCurrency(sumFiltroInversion)}
-                    </td>
-                    <td class="py-3 px-3 text-right text-emerald-800 font-black text-sm">
-                        ${sumTotFmt}
                     </td>
                     <td class="py-3 px-3 text-right text-amber-900 font-black text-sm bg-amber-100/70 border-x border-amber-300">
                         ${sumCuatFmt}
@@ -9292,7 +9311,8 @@ window.exportIndicadorReportPDF = function (indKey) {
         let ac = parseNum(r['AREA EJECUTADA CUATRENIO (M2)']) || 0;
         if (!isCuatrenioAnterior(r) && ac === 0 && ae > 0) ac = ae;
 
-        const fis = Math.round(parseNum(r['FISICO_NORM']) || 0);
+        const fisVal = parseNum(r['FISICO_NORM']) || parseNum(r['% EJECUCION FISICA']) || 0;
+        const finVal = parseNum(r['FINANCIERO_NORM']) || parseNum(r['% EJECUCION FINANCIERA (RECURSOS DEPARTAMENTO)']) || parseNum(r['% EJECUCION FINANCIERA']) || 0;
         const est = r['ESTADO CONVENIO'] || 'N/A';
 
         let alcanceTotFmt = cfg.tipo === 'km' ? `${(le / 1000).toFixed(2)} km (${formatNumber(Math.round(le))} m)` : (cfg.tipo === 'm2' ? `${formatNumber(Math.round(ae))} m²` : '1 und');
@@ -9303,10 +9323,10 @@ window.exportIndicadorReportPDF = function (indKey) {
                 <td style="padding: 6px 8px; font-weight: bold; font-family: monospace;">${conv}</td>
                 <td style="padding: 6px 8px;"><strong>${mun}</strong><br><span style="color:#64748B;font-size:10px;">${sub}</span></td>
                 <td style="padding: 6px 8px;"><strong>${clasif}</strong><br><span style="color:#64748B;font-size:10px;">${via}</span></td>
-                <td style="padding: 6px 8px; text-align: right; font-weight: bold; color:#065F46;">${alcanceTotFmt}</td>
+                <td style="padding: 6px 8px; text-align: center;"><span style="background:#F1F5F9;padding:2px 6px;border-radius:4px;font-size:9.5px;font-weight:bold;">${est}</span></td>
                 <td style="padding: 6px 8px; text-align: right; font-weight: bold; color: #92400E; background: #FEF3C7;">${alcanceCuatFmt}</td>
                 <td style="padding: 6px 8px; text-align: right;">${formatCurrency(inv)}</td>
-                <td style="padding: 6px 8px; text-align: center;">${fis}% - ${est}</td>
+                <td style="padding: 6px 8px; text-align: center;"><strong>Fís:</strong> ${Math.round(fisVal)}% &nbsp;|&nbsp; <span style="color:#2563EB;"><strong>Fin:</strong> ${Math.round(finVal)}%</span></td>
             </tr>
         `;
     });
@@ -9353,17 +9373,16 @@ window.exportIndicadorReportPDF = function (indKey) {
                         <th>Convenio</th>
                         <th>Municipio / Subregión</th>
                         <th>Clasificación</th>
-                        <th style="text-align:right;">Alcance Total Ejecutado</th>
+                        <th style="text-align:center;">Estado</th>
                         <th style="text-align:right;background:#FEF3C7;color:#92400E;">Aporte Cuatrienio</th>
                         <th style="text-align:right;">Inversión</th>
-                        <th style="text-align:center;">Estado / %</th>
+                        <th style="text-align:center;">% Físico / Financiero</th>
                     </tr>
                 </thead>
                 <tbody>${rowsHtml}</tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="3">TOTAL (${relatedRows.length} convenios)</td>
-                        <td style="text-align:right;">${totalTotFmt}</td>
+                        <td colspan="4">TOTAL (${relatedRows.length} convenios)</td>
                         <td style="text-align:right;color:#92400E;background:#FEF3C7;">${totalCuatFmt}</td>
                         <td style="text-align:right;">${formatCurrency(totalInv)}</td>
                         <td></td>
@@ -16621,11 +16640,13 @@ window.deleteVisitFromHub = async function (visitId) {
     }
 
     if (window.DIATDataService) {
-        window.DIATDataService.deleteTechnicalVisit(visitId);
-        alertToast("Visita Eliminada", `Se ha eliminado la visita técnica del Convenio ${conv}.`, "info");
+        alertToast("Eliminando...", `Sincronizando eliminación del Convenio ${conv} con Google Drive...`, "info");
+        await window.DIATDataService.deleteTechnicalVisit(visitId);
+        alertToast("Visita Eliminada", `Se ha eliminado la visita técnica del Convenio ${conv} en Google Drive y localmente.`, "success");
         renderHubVisitsList();
         if (typeof renderVisitasTab === 'function') renderVisitasTab();
         if (typeof applyFilters === 'function') applyFilters();
+        if (typeof renderSupervisorPortal === 'function') renderSupervisorPortal();
     }
 };
 

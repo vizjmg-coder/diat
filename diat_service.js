@@ -75,6 +75,24 @@ class DIATDataService {
         localStorage.setItem('diat_convenio_changes', JSON.stringify(changes));
     }
 
+    static getDeletedVisitIds() {
+        try {
+            const raw = localStorage.getItem('diat_deleted_visit_ids');
+            if (raw) {
+                const list = JSON.parse(raw);
+                if (Array.isArray(list)) return new Set(list);
+            }
+        } catch (e) {}
+        return new Set();
+    }
+
+    static addDeletedVisitId(id) {
+        if (!id) return;
+        const set = this.getDeletedVisitIds();
+        set.add(String(id).trim());
+        localStorage.setItem('diat_deleted_visit_ids', JSON.stringify(Array.from(set)));
+    }
+
     static getTechnicalVisits() {
         try {
             const raw = localStorage.getItem('diat_technical_visits');
@@ -86,7 +104,8 @@ class DIATDataService {
                     if (hasMock) {
                         localStorage.removeItem('diat_technical_visits');
                     } else {
-                        return stored.filter(v => v && v.id && v.id.startsWith('VT-') && v.id !== 'TEST-ID').map(v => sanitizeVisit({
+                        const deletedIds = this.getDeletedVisitIds();
+                        return stored.filter(v => v && v.id && v.id.startsWith('VT-') && !v.id.startsWith('TEST-') && !v._delete && !v.delete && v.estado !== 'Eliminada' && v.estado !== 'Eliminado' && !deletedIds.has(v.id)).map(v => sanitizeVisit({
                             ...v,
                             estado: v.estado || 'Realizada',
                             prioridad: v.prioridad || 'Media'
@@ -101,7 +120,10 @@ class DIATDataService {
     }
 
     static saveTechnicalVisits(visits) {
-        const cleanList = (visits || []).map(v => sanitizeVisit(v));
+        const deletedIds = this.getDeletedVisitIds();
+        const cleanList = (visits || [])
+            .filter(v => v && v.id && !deletedIds.has(v.id) && !v._delete && !v.delete && v.estado !== 'Eliminada' && v.estado !== 'Eliminado')
+            .map(v => sanitizeVisit(v));
         localStorage.setItem('diat_technical_visits', JSON.stringify(cleanList));
     }
 
@@ -348,13 +370,27 @@ class DIATDataService {
             if (response.ok) {
                 const visits = await response.json();
                 if (Array.isArray(visits) && visits.length > 0) {
-                    const validServerVisits = visits.filter(v => v && v.id && v.id.startsWith('VT-') && v.id !== 'TEST-ID').map(v => sanitizeVisit({
+                    // Detectar y registrar visitas marcadas como eliminadas en el servidor para que se replique en todas las IPs
+                    visits.forEach(v => {
+                        if (v && v.id && (v._delete === true || v.delete === true || v.estado === 'Eliminada' || v.estado === 'Eliminado' || v.eliminado === true)) {
+                            this.addDeletedVisitId(v.id);
+                        }
+                    });
+
+                    const deletedIds = this.getDeletedVisitIds();
+
+                    const validServerVisits = visits.filter(v => {
+                        if (!v || !v.id || !v.id.startsWith('VT-') || v.id.startsWith('TEST-')) return false;
+                        if (v._delete === true || v.delete === true || v.estado === 'Eliminada' || v.estado === 'Eliminado' || v.eliminado === true) return false;
+                        if (deletedIds.has(v.id)) return false;
+                        return true;
+                    }).map(v => sanitizeVisit({
                         ...v,
                         estado: v.estado || 'Realizada',
                         prioridad: v.prioridad || 'Media'
                     }));
 
-                    const localVisits = this.getTechnicalVisits();
+                    const localVisits = this.getTechnicalVisits().filter(v => !deletedIds.has(v.id));
                     const visitMap = new Map();
                     validServerVisits.forEach(v => visitMap.set(v.id, v));
                     localVisits.forEach(v => {
@@ -363,7 +399,7 @@ class DIATDataService {
                         }
                     });
 
-                    const merged = Array.from(visitMap.values());
+                    const merged = Array.from(visitMap.values()).filter(v => !deletedIds.has(v.id));
                     this.saveTechnicalVisits(merged);
 
                     window.dispatchEvent(new CustomEvent('diat:visitasUpdated', { detail: { visits: merged } }));
@@ -380,10 +416,11 @@ class DIATDataService {
             if (localResp.ok) {
                 const localVisits = await localResp.json();
                 if (Array.isArray(localVisits) && localVisits.length > 0) {
-                    const current = this.getTechnicalVisits();
+                    const deletedIds = this.getDeletedVisitIds();
+                    const current = this.getTechnicalVisits().filter(v => !deletedIds.has(v.id));
                     const visitMap = new Map();
                     current.forEach(v => visitMap.set(v.id, sanitizeVisit(v)));
-                    localVisits.filter(v => v && v.id && v.id.startsWith('VT-') && v.id !== 'TEST-ID').forEach(v => {
+                    localVisits.filter(v => v && v.id && v.id.startsWith('VT-') && !v.id.startsWith('TEST-') && !deletedIds.has(v.id) && !v._delete && !v.delete && v.estado !== 'Eliminada' && v.estado !== 'Eliminado').forEach(v => {
                         if (!visitMap.has(v.id)) {
                             visitMap.set(v.id, sanitizeVisit({
                                 ...v,
@@ -392,7 +429,7 @@ class DIATDataService {
                             }));
                         }
                     });
-                    const mergedLocal = Array.from(visitMap.values());
+                    const mergedLocal = Array.from(visitMap.values()).filter(v => !deletedIds.has(v.id));
                     this.saveTechnicalVisits(mergedLocal);
                     window.dispatchEvent(new CustomEvent('diat:visitasUpdated', { detail: { visits: mergedLocal } }));
                     return true;
@@ -531,12 +568,54 @@ class DIATDataService {
     }
 
     /**
-     * Elimina una visita técnica localmente
+     * Elimina una visita técnica localmente y en Google Drive en tiempo real
      */
-    static deleteTechnicalVisit(visitId) {
+    static async deleteTechnicalVisit(visitId) {
+        if (!visitId) return false;
+        const vId = String(visitId).trim();
+
+        // 1. Registrar inmediatamente en lista negra de eliminados
+        this.addDeletedVisitId(vId);
+
+        // 2. Filtrar caché local y actualizar
         let visits = this.getTechnicalVisits();
-        visits = visits.filter(v => v.id !== visitId);
+        visits = visits.filter(v => v.id !== vId);
         this.saveTechnicalVisits(visits);
+
+        // 3. Notificar cambio inmediato en la UI
+        window.dispatchEvent(new CustomEvent('diat:visitasUpdated', { detail: { visits } }));
+
+        // 4. Sincronizar eliminación en Google Drive en la nube
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwXBFslIOCwVCyAae8-FG0VL5pqotLkjejwJhavm5xoGU4SlyVETwRkGCmDNVkcRPw4/exec";
+        const deletePayload = {
+            action: "saveVisit",
+            folderId: this.DRIVE_VISITAS_FOLDER_ID,
+            folderUrl: this.DRIVE_VISITAS_FOLDER_URL,
+            file: this.DRIVE_VISITAS_FILENAME,
+            visit: {
+                id: vId,
+                estado: "Eliminada",
+                _delete: true,
+                delete: true,
+                eliminado: true,
+                fechaEliminacion: new Date().toISOString()
+            }
+        };
+
+        try {
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8"
+                },
+                body: JSON.stringify(deletePayload)
+            });
+            console.log(`[DIAT] Solicitud de eliminación enviada a Google Drive para la visita ${vId}`);
+        } catch (err) {
+            console.error(`[DIAT] Error enviando eliminación de ${vId} a Google Drive:`, err);
+        }
+
         return true;
     }
 }
@@ -548,6 +627,7 @@ window.DIATDataService = DIATDataService;
 (function initVisitasData() {
     try {
         const raw = localStorage.getItem('diat_technical_visits');
+        const deletedIds = DIATDataService.getDeletedVisitIds ? DIATDataService.getDeletedVisitIds() : new Set();
         let needsReload = false;
         if (raw) {
             const parsed = JSON.parse(raw);
@@ -555,7 +635,7 @@ window.DIATDataService = DIATDataService;
                 console.log('[DIAT] Purgando visitas simuladas no autenticas de localStorage...');
                 localStorage.removeItem('diat_technical_visits');
                 needsReload = true;
-            } else if (!Array.isArray(parsed) || parsed.filter(v => v && v.id && v.id.startsWith('VT-') && v.id !== 'TEST-ID').length < 5) {
+            } else if (!Array.isArray(parsed)) {
                 needsReload = true;
             }
         } else {
@@ -568,9 +648,9 @@ window.DIATDataService = DIATDataService;
                 .then(r => r.ok ? r.json() : null)
                 .then(data => {
                     if (Array.isArray(data) && data.length > 0) {
-                        const current = DIATDataService.getTechnicalVisits();
+                        const current = DIATDataService.getTechnicalVisits().filter(v => !deletedIds.has(v.id));
                         const visitMap = new Map();
-                        data.filter(v => v && v.id && v.id.startsWith('VT-') && v.id !== 'TEST-ID').forEach(v => {
+                        data.filter(v => v && v.id && v.id.startsWith('VT-') && !v.id.startsWith('TEST-') && !deletedIds.has(v.id) && !v._delete && !v.delete && v.estado !== 'Eliminada' && v.estado !== 'Eliminado').forEach(v => {
                             visitMap.set(v.id, {
                                 ...v,
                                 estado: v.estado || 'Realizada',
@@ -578,7 +658,7 @@ window.DIATDataService = DIATDataService;
                             });
                         });
                         current.forEach(v => visitMap.set(v.id, v));
-                        const unified = Array.from(visitMap.values());
+                        const unified = Array.from(visitMap.values()).filter(v => !deletedIds.has(v.id));
                         DIATDataService.saveTechnicalVisits(unified);
                         console.log('[DIAT] Archivo visitas.json cargado exitosamente (' + unified.length + ' visitas organizadas).');
                         if (typeof renderVisitasTab === 'function') renderVisitasTab();
@@ -587,14 +667,14 @@ window.DIATDataService = DIATDataService;
                 })
                 .catch(e => console.warn('[DIAT] Error precargando visitas.json:', e))
                 .finally(() => {
-                    // Sincronizar en lnea con Google Drive en tiempo real
+                    // Sincronizar en línea con Google Drive en tiempo real
                     DIATDataService.syncTechnicalVisitsFromServer().then(() => {
                         if (typeof renderVisitasTab === 'function') renderVisitasTab();
                         if (typeof renderSupervisorPortal === 'function') renderSupervisorPortal();
                     });
                 });
         } else {
-            // Sincronizar en lnea con Google Drive en tiempo real
+            // Sincronizar en línea con Google Drive en tiempo real
             DIATDataService.syncTechnicalVisitsFromServer().then(() => {
                 if (typeof renderVisitasTab === 'function') renderVisitasTab();
                 if (typeof renderSupervisorPortal === 'function') renderSupervisorPortal();

@@ -3044,6 +3044,7 @@ async function generateResumenPDF() {
             [
                 { text: 'CONVENIO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5 },
                 { text: 'CONVENIENTE EJECUTOR', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5 },
+                { text: 'CLASIFICACIÓN / INDICADOR', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.2 },
                 { text: 'SUPERVISOR', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5 },
                 { text: 'ESTADO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5, alignment: 'center' },
                 { text: 'AV. FÍSICO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5, alignment: 'right' },
@@ -3053,8 +3054,8 @@ async function generateResumenPDF() {
 
         if (filteredData.length === 0) {
             tableBody.push([
-                { text: 'No se encontraron convenios con los filtros seleccionados.', colSpan: 6, alignment: 'center', fontSize: 8, italics: true },
-                {}, {}, {}, {}, {}
+                { text: 'No se encontraron convenios con los filtros seleccionados.', colSpan: 7, alignment: 'center', fontSize: 8, italics: true },
+                {}, {}, {}, {}, {}, {}
             ]);
         } else {
             filteredData.forEach(r => {
@@ -3093,9 +3094,30 @@ async function generateResumenPDF() {
                     muniCellContent = { text: String(r['MUNICIPIO'] || ''), fontSize: 7.5 };
                 }
 
+                // Clasificación e Indicador
+                const clasifVal = String(r['CLASIFICACION'] || r['CLASIFICACIÓN'] || r['CLASIFICACI"N'] || '').trim().toUpperCase();
+                const indVal = String(r['INDICADOR'] || r['INDICADOR PLAN DE DESARROLLO'] || '').trim().toUpperCase();
+
+                let clasifCell = {};
+                if (clasifVal && indVal && indVal !== 'N/A' && indVal !== '-') {
+                    clasifCell = {
+                        stack: [
+                            { text: clasifVal, fontSize: 7.2, bold: true, color: '#1E293B' },
+                            { text: indVal, fontSize: 6.3, color: '#0369A1', bold: true, margin: [0, 1, 0, 0] }
+                        ]
+                    };
+                } else if (clasifVal) {
+                    clasifCell = { text: clasifVal, fontSize: 7.2, bold: true, color: '#1E293B' };
+                } else if (indVal && indVal !== 'N/A' && indVal !== '-') {
+                    clasifCell = { text: indVal, fontSize: 6.8, bold: true, color: '#0369A1' };
+                } else {
+                    clasifCell = { text: 'N/A', fontSize: 6.8, color: '#94A3B8' };
+                }
+
                 tableBody.push([
                     { text: String(r['CONVENIO'] || ''), fontSize: 7.5, bold: true },
                     muniCellContent,
+                    clasifCell,
                     { text: String(r['SUPERVISOR'] || 'SIN ASIGNAR'), fontSize: 7 },
                     { text: sysState.label, fontSize: 7, bold: true, color: badgeColor, fillColor: badgeBg, alignment: 'center' },
                     { text: pfis.toFixed(1) + '%', fontSize: 7.5, alignment: 'right', bold: true },
@@ -3277,7 +3299,7 @@ async function generateResumenPDF() {
                 {
                     table: {
                         headerRows: 1,
-                        widths: ['auto', '*', 'auto', 'auto', 70, 80],
+                        widths: ['auto', '*', 'auto', 'auto', 'auto', 48, 52],
                         body: tableBody
                     },
                     layout: {

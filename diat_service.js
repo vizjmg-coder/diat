@@ -1077,6 +1077,17 @@ class DIATDataService {
             sessionStorage.setItem('diat_last_attempt_user', userKey);
         } catch (e) {}
 
+        if (userKey !== 'ADMIN') {
+            const perms = this.getSupervisorPermissions(userKey);
+            if (perms && perms.active === false) {
+                return {
+                    success: false,
+                    canReset: false,
+                    error: `La cuenta del usuario ${userKey} se encuentra actualmente desactivada por el Administrador DIAT. Contacta a la Dirección de Infraestructura.`
+                };
+            }
+        }
+
         const client = this.getSupabase();
         const passHash = await this.hashPassword(passInp);
 
@@ -1134,10 +1145,10 @@ class DIATDataService {
                         const isProvBlocked = (passUpper === 'DIAT2026' && supaUser.estado_password === 'personalizada' && userKey !== 'ADMIN');
                         return {
                             success: false,
-                            canReset: true,
+                            canReset: false,
                             error: isProvBlocked
-                                ? 'Ya has personalizado tu contraseña previamente. La clave provisional "DIAT2026" ha quedado inhabilitada por seguridad.'
-                                : 'Contraseña incorrecta para el usuario ' + userKey + '. Recuerda que tu contraseña personalizada está activa.'
+                                ? 'La clave provisional "DIAT2026" ha quedado inhabilitada por seguridad. Si olvidaste tu contraseña personalizada, solicita el restablecimiento al Administrador DIAT.'
+                                : 'Contraseña incorrecta para el usuario ' + userKey + '. Si olvidaste tu contraseña, solicita el restablecimiento al Administrador DIAT.'
                         };
                     }
                 }
@@ -1163,8 +1174,8 @@ class DIATDataService {
         if (hasChanged && (passHash === PROVISIONAL_HASH || passUpper === 'DIAT2026') && !isOfflineAdmin) {
             return {
                 success: false,
-                canReset: true,
-                error: 'Ya has personalizado tu contraseña previamente. La contraseña inicial provisional ha quedado inhabilitada para tu usuario por seguridad. Por favor ingresa con tu contraseña personalizada.'
+                canReset: false,
+                error: 'La contraseña inicial provisional ha quedado inhabilitada por seguridad. Si olvidaste tu contraseña personalizada, solicita el restablecimiento al Administrador DIAT.'
             };
         }
 
@@ -1202,15 +1213,15 @@ class DIATDataService {
             });
             return {
                 success: false,
-                canReset: true,
-                error: 'Contraseña incorrecta para el usuario ' + userKey + '. Recuerda que tu contraseña personalizada está activa.'
+                canReset: false,
+                error: 'Contraseña incorrecta para el usuario ' + userKey + '. Si no recuerdas tu contraseña, solicita el restablecimiento al Administrador DIAT.'
             };
         }
 
         return {
             success: false,
             canReset: false,
-            error: 'Credenciales inválidas para el usuario ' + userKey + '. Verifica tu usuario corto y contraseña. (Para primer ingreso usa la clave provisional DIAT2026).'
+            error: 'Credenciales inválidas para el usuario ' + userKey + '. Verifica tu usuario corto y contraseña. Si no recuerdas tu clave, contacta al Administrador DIAT.'
         };
     }
 
@@ -1349,6 +1360,101 @@ class DIATDataService {
     }
 
     /**
+     * Obtiene los permisos configurados para un supervisor
+     * @param {string} userKey Usuario corto (ej. JMARINGA)
+     */
+    static getSupervisorPermissions(userKey) {
+        const uKey = String(userKey || '').trim().toUpperCase();
+        if (uKey === 'ADMIN') {
+            return {
+                canEditConvenios: true,
+                canCreateVisits: true,
+                canManagePhotos: true,
+                canExportReports: true,
+                active: true
+            };
+        }
+        try {
+            const raw = localStorage.getItem('diat_supervisor_permissions');
+            if (raw) {
+                const map = JSON.parse(raw);
+                if (map && map[uKey]) {
+                    return {
+                        canEditConvenios: map[uKey].canEditConvenios !== false,
+                        canCreateVisits: map[uKey].canCreateVisits !== false,
+                        canManagePhotos: map[uKey].canManagePhotos !== false,
+                        canExportReports: map[uKey].canExportReports !== false,
+                        active: map[uKey].active !== false
+                    };
+                }
+            }
+        } catch (e) {}
+
+        return {
+            canEditConvenios: true,
+            canCreateVisits: true,
+            canManagePhotos: true,
+            canExportReports: true,
+            active: true
+        };
+    }
+
+    /**
+     * Guarda los permisos configurados para un supervisor
+     * @param {string} userKey Usuario corto
+     * @param {object} perms Objeto de permisos
+     */
+    static saveSupervisorPermissions(userKey, perms) {
+        const uKey = String(userKey || '').trim().toUpperCase();
+        if (!uKey || uKey === 'ADMIN') return false;
+
+        try {
+            const raw = localStorage.getItem('diat_supervisor_permissions');
+            const map = raw ? JSON.parse(raw) : {};
+            map[uKey] = {
+                canEditConvenios: Boolean(perms.canEditConvenios),
+                canCreateVisits: Boolean(perms.canCreateVisits),
+                canManagePhotos: Boolean(perms.canManagePhotos),
+                canExportReports: Boolean(perms.canExportReports),
+                active: Boolean(perms.active),
+                updatedAt: new Date().toISOString()
+            };
+            localStorage.setItem('diat_supervisor_permissions', JSON.stringify(map));
+
+            // Sincronizar con Supabase si está disponible
+            const client = this.getSupabase();
+            if (client) {
+                client.from('usuarios_portal').update({
+                    activo: Boolean(perms.active),
+                    permisos: map[uKey],
+                    updated_at: new Date().toISOString()
+                }).eq('usuario_corto', uKey).then(() => {}).catch(() => {});
+            }
+
+            this.logActivity('MODIFICAR_PERMISOS', {
+                usuario: uKey,
+                descripcion: `El Administrador actualizó los permisos del supervisor ${uKey}.`
+            });
+
+            return true;
+        } catch (e) {
+            console.error('Error guardando permisos:', e);
+            return false;
+        }
+    }
+
+    /**
+     * Verifica si un usuario tiene un permiso específico
+     */
+    static hasPermission(user, permKey) {
+        if (!user) return false;
+        const uKey = (user.username || user).toUpperCase();
+        if (uKey === 'ADMIN' || (user.role && user.role.toUpperCase().includes('ADMIN'))) return true;
+        const perms = this.getSupervisorPermissions(uKey);
+        return Boolean(perms[permKey]);
+    }
+
+    /**
      * Exporta el historial de auditoría de Supabase a formato CSV compatible con Excel
      */
     static async exportAuditLogsToCSV() {
@@ -1416,32 +1522,34 @@ window.exportAuditLogsToCSV = function() {
     return DIATDataService.exportAuditLogsToCSV();
 };
 
-// Función global de restablecimiento asistido
+// Función global de restablecimiento asistido (Protegida: Solo Administrador DIAT)
 window.resetUserPassword = async function(userKey) {
-    if (!userKey) {
-        const inp = document.getElementById('login-username');
-        userKey = inp ? inp.value : '';
+    const logged = (typeof getLoggedUser === 'function') ? getLoggedUser() : null;
+    const isAuthAdmin = (logged && (logged.username === 'ADMIN' || (logged.role && logged.role.toUpperCase().includes('ADMIN')))) || window.diatAdminAuthorized;
+    if (!isAuthAdmin) {
+        if (typeof alertToast === 'function') {
+            alertToast('Acceso Denegado', 'Solo el Administrador General DIAT puede restablecer contraseñas de supervisores desde el panel de control.', 'error');
+        }
+        return false;
     }
     userKey = String(userKey || '').trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
     if (!userKey) {
         if (typeof alertToast === 'function') {
-            alertToast('Usuario requerido', 'Por favor ingresa primero tu usuario corto para restablecer.', 'warning');
+            alertToast('Usuario requerido', 'Por favor especifica el usuario corto a restablecer.', 'warning');
         }
-        return;
+        return false;
     }
-    if (confirm(`¿Deseas restablecer la contraseña del usuario ${userKey} a la clave provisional inicial (DIAT2026)? Al iniciar sesión deberás configurar una nueva contraseña.`)) {
+    if (confirm(`¿Deseas restablecer la contraseña del supervisor ${userKey} a la clave provisional inicial (DIAT2026)?\n\nAl iniciar sesión se le exigirá configurar una nueva clave personalizada.`)) {
         await DIATDataService.resetUserPassword(userKey);
-        const passInp = document.getElementById('login-password');
-        if (passInp) {
-            passInp.value = 'DIAT2026';
-            passInp.focus();
-        }
-        const errBox = document.getElementById('login-error-alert');
-        if (errBox) errBox.classList.add('hidden');
         if (typeof alertToast === 'function') {
-            alertToast('Contraseña Restablecida', `Se ha restablecido la clave de ${userKey} a DIAT2026. Haz clic en Iniciar Sesión para acceder y definir una nueva.`, 'info');
+            alertToast('Contraseña Restablecida', `Se ha restablecido la clave de ${userKey} a DIAT2026 exitosamente.`, 'success');
         }
+        if (typeof renderAdminSupervisoresPanel === 'function') {
+            renderAdminSupervisoresPanel();
+        }
+        return true;
     }
+    return false;
 };
 
 // Exponer la clase globalmente para su uso en index.html y script.js

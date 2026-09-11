@@ -423,31 +423,66 @@ async function getBase64ImageFromURL(url) {
     });
 }
 
-// Resizes gallery photos to fit within a bounding box of maxDim (default 600px), preserving original aspect ratio, compressed to JPEG at 75% quality
-async function getOptimizedBase64Image(url, maxDim = 600) {
-    return new Promise((resolve, reject) => {
+// Resizes gallery photos to fit within a bounding box of maxDim (default 1200px), preserving original aspect ratio, compressed to JPEG at specified quality (default 0.85)
+async function getOptimizedBase64Image(url, maxDim = 1200, quality = 0.85) {
+    return new Promise((resolve) => {
+        if (!url || typeof url !== 'string') {
+            resolve(null);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            resolve(null);
+        }, 8000);
+
         const img = new Image();
-        img.crossOrigin = 'Anonymous';
+        if (!url.startsWith('data:')) {
+            img.crossOrigin = 'Anonymous';
+        }
+
         img.onload = () => {
-            let width = img.width;
-            let height = img.height;
-            if (width > maxDim || height > maxDim) {
-                if (width > height) {
-                    height = Math.round((height * maxDim) / width);
-                    width = maxDim;
-                } else {
-                    width = Math.round((width * maxDim) / height);
-                    height = maxDim;
+            clearTimeout(timer);
+            try {
+                let width = img.naturalWidth || img.width;
+                let height = img.naturalHeight || img.height;
+                if (!width || !height) {
+                    resolve(null);
+                    return;
                 }
+
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                } else {
+                    resolve(null);
+                }
+            } catch (e) {
+                console.warn('getOptimizedBase64Image canvas error:', e);
+                resolve(null);
             }
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.75));
         };
-        img.onerror = () => reject(new Error('Image load error: ' + url));
+
+        img.onerror = () => {
+            clearTimeout(timer);
+            resolve(null);
+        };
+
         img.src = url;
     });
 }
@@ -1164,89 +1199,160 @@ async function generateProfessionalPDF(row) {
         // Capture Logo asynchronously
         const logoBase64 = await getBase64ImageFromURL('./assets/escudo_antioquia.png').catch(() => null);
 
-        // ===== ASYNC COMPREHENSIVE PHOTO GATHERING (ANTES, DURANTE, DESPUÉS, VISITAS Y LOCALSTORAGE) =====
+        // ===== ASYNC COMPREHENSIVE PHOTO GATHERING (DEDUPLICATED & HIGH RESOLUTION) =====
         const numConv = String(row['CONVENIO'] || '').trim();
+
+        // Extraer canonical file ID de URLs de Google Drive para garantizar cero duplicados
+        const getDriveFileId = (url) => {
+            if (!url || typeof url !== 'string') return null;
+            if (url.startsWith('data:image/')) return null;
+            const m = url.match(/(?:id=|\/file\/d\/|\/d\/|lh3\.googleusercontent\.com\/d\/)([a-zA-Z0-9_-]{25,})/);
+            return m ? m[1] : null;
+        };
+
+        const getPhotoKey = (url) => {
+            if (!url || typeof url !== 'string') return '';
+            if (url.startsWith('data:image/')) {
+                return 'b64_' + url.length + '_' + url.slice(0, 60);
+            }
+            const fid = getDriveFileId(url);
+            if (fid) return 'drive_' + fid;
+            return url.split('?')[0].split('#')[0].trim().toLowerCase();
+        };
+
+        const toHighResUrl = (url) => {
+            if (!url || typeof url !== 'string') return url;
+            if (url.startsWith('data:image/')) return url;
+            const fid = getDriveFileId(url);
+            if (fid) {
+                return `https://lh3.googleusercontent.com/d/${fid}=s1600`;
+            }
+            if (url.includes('lh3.googleusercontent.com/d/')) {
+                return url.split('=s')[0] + '=s1600';
+            }
+            return url;
+        };
+
         const rawPhotos = [];
 
-        // 1. From DOM modal gallery
-        document.querySelectorAll('#mod-galeria img').forEach(img => {
-            const stage = img.getAttribute('data-stage') || img.getAttribute('data-folder') || 'Evidencia';
-            if (img.src) rawPhotos.push({ src: img.src, stage });
-        });
-
-        // 2. From LocalStorage
+        // 1. Fotos locales desde assets si existen
         try {
-            const localPhotos = JSON.parse(localStorage.getItem('diat_photos_' + numConv)) || [];
-            localPhotos.forEach(p => {
-                if (p && p.base64) rawPhotos.push({ src: p.base64, stage: 'Después' });
-            });
+            const idxResp = await fetch(`./assets/fotos/${numConv}/index.json`).catch(() => null);
+            if (idxResp && idxResp.ok) {
+                const idxData = await idxResp.json();
+                if (Array.isArray(idxData.antes)) idxData.antes.forEach(p => rawPhotos.push({ src: `./assets/fotos/${numConv}/${p}`, stage: 'Antes' }));
+                if (Array.isArray(idxData.durante)) idxData.durante.forEach(p => rawPhotos.push({ src: `./assets/fotos/${numConv}/${p}`, stage: 'Durante' }));
+                if (Array.isArray(idxData.despues)) idxData.despues.forEach(p => rawPhotos.push({ src: `./assets/fotos/${numConv}/${p}`, stage: 'Después' }));
+            }
         } catch (e) { }
 
-        // 3. From Technical Visits (DIATDataService)
+        // 2. Fotos de Google Drive (Caché en memoria, localStorage, sessionStorage o Apps Script)
+        let driveData = (window.DIAT_DRIVE_PHOTOS_CACHE && window.DIAT_DRIVE_PHOTOS_CACHE[numConv]) || null;
+        if (!driveData) {
+            try {
+                const rawC = localStorage.getItem('diat_drive_cache_' + numConv) || sessionStorage.getItem('diat_drive_cache_' + numConv);
+                if (rawC) driveData = JSON.parse(rawC);
+            } catch (e) { }
+        }
+
+        if (!driveData) {
+            try {
+                const scriptUrl = `https://script.google.com/macros/s/AKfycbwXBFslIOCwVCyAae8-FG0VL5pqotLkjejwJhavm5xoGU4SlyVETwRkGCmDNVkcRPw4/exec?convenio=${encodeURIComponent(numConv)}`;
+                const driveResp = await fetch(scriptUrl).catch(() => null);
+                if (driveResp && driveResp.ok) {
+                    driveData = await driveResp.json();
+                    if (driveData) {
+                        window.DIAT_DRIVE_PHOTOS_CACHE[numConv] = driveData;
+                        try {
+                            localStorage.setItem('diat_drive_cache_' + numConv, JSON.stringify(driveData));
+                            sessionStorage.setItem('diat_drive_cache_' + numConv, JSON.stringify(driveData));
+                        } catch (e) { }
+                    }
+                }
+            } catch (e) {
+                console.warn("Error fetching drive photos for PDF:", e);
+            }
+        }
+
+        if (driveData) {
+            if (Array.isArray(driveData.antes)) driveData.antes.forEach(u => rawPhotos.push({ src: u, stage: 'Antes' }));
+            if (Array.isArray(driveData.durante)) driveData.durante.forEach(u => rawPhotos.push({ src: u, stage: 'Durante' }));
+            if (Array.isArray(driveData.despues)) driveData.despues.forEach(u => rawPhotos.push({ src: u, stage: 'Después' }));
+        }
+
+        // 3. Fotos subidas por el usuario en LocalStorage
         try {
-            if (window.DIATDataService) {
+            const localPhotos = JSON.parse(localStorage.getItem('diat_photos_' + numConv)) || [];
+            if (Array.isArray(localPhotos)) {
+                localPhotos.forEach(p => {
+                    const src = p.base64 || p.src || (typeof p === 'string' ? p : null);
+                    if (src) {
+                        const stage = String(p.stage || 'Después');
+                        rawPhotos.push({ src, stage });
+                    }
+                });
+            }
+        } catch (e) { }
+
+        // 4. Fotos de Visitas Técnicas registradas en DIATDataService
+        try {
+            if (window.DIATDataService && typeof window.DIATDataService.getTechnicalVisits === 'function') {
                 const allVisits = window.DIATDataService.getTechnicalVisits();
                 const convVisits = allVisits.filter(v => String(v.convenioId).trim() === numConv);
                 convVisits.forEach(v => {
                     if (v.photos && Array.isArray(v.photos)) {
+                        const visitLabel = v.fecha ? `Visita ${v.fecha}` : 'Visita Técnica';
                         v.photos.forEach(ph => {
-                            rawPhotos.push({ src: ph, stage: `Visita ${v.fecha || ''}`.trim() });
+                            if (ph) rawPhotos.push({ src: ph, stage: visitLabel });
                         });
                     }
                 });
             }
         } catch (e) { }
 
-        // 4. Fetch local index.json or Apps Script Google Drive
-        try {
-            const idxResp = await fetch(`./assets/fotos/${numConv}/index.json`).catch(() => null);
-            if (idxResp && idxResp.ok) {
-                const idxData = await idxResp.json();
-                if (idxData.antes) idxData.antes.forEach(p => rawPhotos.push({ src: `./assets/fotos/${numConv}/${p}`, stage: 'Antes' }));
-                if (idxData.durante) idxData.durante.forEach(p => rawPhotos.push({ src: `./assets/fotos/${numConv}/${p}`, stage: 'Durante' }));
-                if (idxData.despues) idxData.despues.forEach(p => rawPhotos.push({ src: `./assets/fotos/${numConv}/${p}`, stage: 'Después' }));
-            } else {
-                const scriptUrl = `https://script.google.com/macros/s/AKfycbwXBFslIOCwVCyAae8-FG0VL5pqotLkjejwJhavm5xoGU4SlyVETwRkGCmDNVkcRPw4/exec?convenio=${encodeURIComponent(numConv)}`;
-                const driveResp = await fetch(scriptUrl).catch(() => null);
-                if (driveResp && driveResp.ok) {
-                    const driveData = await driveResp.json();
-                    if (driveData.antes) driveData.antes.forEach(u => rawPhotos.push({ src: u, stage: 'Antes' }));
-                    if (driveData.durante) driveData.durante.forEach(u => rawPhotos.push({ src: u, stage: 'Durante' }));
-                    if (driveData.despues) driveData.despues.forEach(u => rawPhotos.push({ src: u, stage: 'Después' }));
-                }
-            }
-        } catch (e) {
-            console.warn("Error fetching extra photos for PDF:", e);
-        }
-
-        // Deduplicate photos by src
+        // Deduplicación estricta por ID único de archivo / hash
         const uniquePhotosMap = new Map();
         rawPhotos.forEach(p => {
-            if (p.src && !uniquePhotosMap.has(p.src)) {
-                uniquePhotosMap.set(p.src, p);
+            if (!p || !p.src) return;
+            const key = getPhotoKey(p.src);
+            if (!key) return;
+            if (!uniquePhotosMap.has(key)) {
+                uniquePhotosMap.set(key, {
+                    src: toHighResUrl(p.src),
+                    stage: p.stage || 'Evidencia'
+                });
             }
         });
 
-        // Convert to Base64 and detect aspect ratio
-        const photosList = [];
-        for (const p of uniquePhotosMap.values()) {
+        // Orden cronológico estricto: Antes -> Durante / Visitas -> Después
+        const getStageOrder = (stage) => {
+            const s = String(stage || '').toLowerCase();
+            if (s.includes('ante')) return 1;
+            if (s.includes('dur') || s.includes('visit')) return 2;
+            if (s.includes('desp')) return 3;
+            return 4;
+        };
+
+        const sortedUniquePhotos = Array.from(uniquePhotosMap.values()).sort((a, b) => {
+            return getStageOrder(a.stage) - getStageOrder(b.stage);
+        });
+
+        // Conversión paralela a Base64 en alta resolución (1200px máx, calidad JPEG 0.85)
+        const photoPromises = sortedUniquePhotos.map(async (p) => {
             try {
-                const base64 = await getOptimizedBase64Image(p.src, 750).catch(() => null);
-                if (base64) {
-                    const isPortrait = await new Promise(res => {
-                        const img = new Image();
-                        img.onload = () => res(img.height > img.width * 1.15);
-                        img.onerror = () => res(false);
-                        img.src = base64;
-                    });
-                    photosList.push({
-                        base64,
-                        stage: p.stage || 'Evidencia',
-                        isPortrait
-                    });
-                }
-            } catch (e) { }
-        }
+                const base64 = await getOptimizedBase64Image(p.src, 1200, 0.85).catch(() => null);
+                if (!base64) return null;
+                return {
+                    base64,
+                    stage: p.stage || 'Evidencia'
+                };
+            } catch (e) {
+                return null;
+            }
+        });
+
+        const resolvedPhotos = await Promise.all(photoPromises);
+        const photosList = resolvedPhotos.filter(Boolean);
 
         const muniName = String(row['MUNICIPIO'] || 'FREDONIA').trim();
         const subregName = getSubregion(muniName);
@@ -1775,34 +1881,51 @@ async function generateProfessionalPDF(row) {
                     const photoPagesContent = [];
 
                     // Helper para crear celda de foto uniforme (ajustado para 4 filas x 2 columnas)
-                    const buildPhotoCell = (p, cardWidth = 254, cardHeight = 135) => ({
-                        stack: [
-                            {
-                                table: {
-                                    body: [[{
-                                        text: `FASE: ${String(p.stage).toUpperCase()}`,
-                                        fontSize: 5.5,
-                                        bold: true,
-                                        color: '#0B5640',
-                                        fillColor: '#E6F4EA',
-                                        alignment: 'center',
-                                        margin: [4, 1, 4, 1]
-                                    }]]
+                    const getStageBadgeStyle = (stage) => {
+                        const s = String(stage || '').toLowerCase();
+                        if (s.includes('ante')) {
+                            return { text: `FASE: ${String(stage).toUpperCase()}`, color: '#92400E', fill: '#FEF3C7' }; // Ámbar
+                        } else if (s.includes('dur')) {
+                            return { text: `FASE: ${String(stage).toUpperCase()}`, color: '#1D4ED8', fill: '#EFF6FF' }; // Azul
+                        } else if (s.includes('desp')) {
+                            return { text: `FASE: ${String(stage).toUpperCase()}`, color: '#0B5640', fill: '#E6F4EA' }; // Verde institucional
+                        } else if (s.includes('visit')) {
+                            return { text: `${String(stage).toUpperCase()}`, color: '#6D28D9', fill: '#F5F3FF' }; // Púrpura visitas
+                        }
+                        return { text: `FASE: ${String(stage).toUpperCase()}`, color: '#334155', fill: '#F1F5F9' }; // Pizarra
+                    };
+
+                    const buildPhotoCell = (p, cardWidth = 254, cardHeight = 135) => {
+                        const badge = getStageBadgeStyle(p.stage);
+                        return {
+                            stack: [
+                                {
+                                    table: {
+                                        body: [[{
+                                            text: badge.text,
+                                            fontSize: 5.5,
+                                            bold: true,
+                                            color: badge.color,
+                                            fillColor: badge.fill,
+                                            alignment: 'center',
+                                            margin: [4, 1, 4, 1]
+                                        }]]
+                                    },
+                                    layout: 'noBorders',
+                                    alignment: 'left',
+                                    margin: [0, 0, 0, 2]
                                 },
-                                layout: 'noBorders',
-                                alignment: 'left',
-                                margin: [0, 0, 0, 2]
-                            },
-                            {
-                                image: p.base64,
-                                width: cardWidth,
-                                height: cardHeight,
-                                cover: { width: cardWidth, height: cardHeight, valign: 'center', align: 'center' }
-                            }
-                        ],
-                        width: cardWidth,
-                        margin: [0, 0, 0, 6]
-                    });
+                                {
+                                    image: p.base64,
+                                    width: cardWidth,
+                                    height: cardHeight,
+                                    cover: { width: cardWidth, height: cardHeight, valign: 'center', align: 'center' }
+                                }
+                            ],
+                            width: cardWidth,
+                            margin: [0, 0, 0, 6]
+                        };
+                    };
 
                     if (photosList.length === 0) {
                         photoPagesContent.push({
@@ -2905,10 +3028,18 @@ async function generateVectorMapAntioquiaSVG(filteredRows, svgWidth = 542, svgHe
 
 async function generateResumenPDF() {
     const btnPdf = document.getElementById('btn-export-resumen-pdf');
-    if (!btnPdf) return;
+    const btnFloating = document.getElementById('btn-floating-export-resumen-pdf');
+    if (!btnPdf || btnPdf.disabled || window._isGeneratingResumenPDF) return;
+    window._isGeneratingResumenPDF = true;
+
     const originalText = btnPdf.innerHTML;
+    const originalFloatingText = btnFloating ? btnFloating.innerHTML : '';
     btnPdf.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Generando PDF...';
     btnPdf.disabled = true;
+    if (btnFloating) {
+        btnFloating.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Generando PDF...';
+        btnFloating.disabled = true;
+    }
 
     try {
         // Configure Poppins Font & FontAwesome Solid
@@ -3160,7 +3291,7 @@ async function generateResumenPDF() {
                 { text: 'ALCANCE', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.2, alignment: 'right' },
                 { text: 'SUPERVISOR', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5 },
                 { text: 'ESTADO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.5, alignment: 'center' },
-                { text: 'APORTE DEPARTAMENTO /\nVALOR AUTORIZADO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.2, alignment: 'right' },
+                { text: 'APORTE DEPARTAMENTO /\nVALOR AUTORIZADO / SALDO IDEA', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 6.8, alignment: 'right' },
                 { text: 'AV. FÍSICO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.2, alignment: 'right' },
                 { text: 'AV. FINANCIERO', bold: true, fillColor: '#1A6B3C', color: '#FFFFFF', fontSize: 7.0, alignment: 'right' }
             ]
@@ -3265,9 +3396,11 @@ async function generateResumenPDF() {
                     };
                 }
 
-                // Columna APORTE DEPARTAMENTO / VALOR AUTORIZADO
+                // Columna APORTE DEPARTAMENTO / VALOR AUTORIZADO / SALDO EN EL IDEA
                 const apDepto = (parseFloat(r['APORTE DEPARTAMENTO']) || 0) + (parseFloat(r['ADICION DEPARTAMENTO']) || 0);
-                const autDepto = parseFloat(r['VALOR TOTAL AUTORIZADO DEPARTAMENTO'] || r['VALOR TOTAL AUTORIZADO']) || 0;
+                const autDepto = parseFloat(r['VALOR TOTAL AUTORIZADO DEPARTAMENTO'] || r['VALOR TOTAL AUTORIZADO'] || r['VALOR AUTORIZADO']) || 0;
+                const desDepto = parseFloat(r['VALOR TOTAL DESEMBOLSADO'] || r['VALOR DESEMBOLSADO EN EL IDEA'] || r['VALOR DESEMBOLSADO EN IDEA'] || r['VALOR DESEMBOLSADO']) || 0;
+                const saldoIdea = Math.max(0, desDepto - autDepto);
                 const formatCOP = (val) => {
                     if (!val || val === 0) return '$ 0';
                     return '$ ' + Number(val).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -3275,8 +3408,9 @@ async function generateResumenPDF() {
 
                 const aporteCell = {
                     stack: [
-                        { text: `Aporte Departamento: ${formatCOP(apDepto)}`, fontSize: 7.5, bold: true, color: '#0F172A' },
-                        { text: `Valor Autorizado: ${formatCOP(autDepto)}`, fontSize: 7.2, color: '#047857', bold: true, margin: [0, 2, 0, 0] }
+                        { text: `Aporte Departamento: ${formatCOP(apDepto)}`, fontSize: 7.3, bold: true, color: '#0F172A' },
+                        { text: `Valor Autorizado: ${formatCOP(autDepto)}`, fontSize: 7.0, color: '#047857', bold: true, margin: [0, 1.5, 0, 0] },
+                        { text: `Saldo en el IDEA: ${formatCOP(saldoIdea)}`, fontSize: 7.0, color: '#2563EB', bold: true, margin: [0, 1.5, 0, 0] }
                     ],
                     alignment: 'right'
                 };
@@ -3437,6 +3571,11 @@ async function generateResumenPDF() {
 
         btnPdf.innerHTML = originalText;
         btnPdf.disabled = false;
+        if (btnFloating) {
+            btnFloating.innerHTML = originalFloatingText;
+            btnFloating.disabled = false;
+        }
+        window._isGeneratingResumenPDF = false;
 
         const toast = document.getElementById('toast-notification');
         if (toast) {
@@ -3445,10 +3584,15 @@ async function generateResumenPDF() {
         }
 
     } catch (err) {
+        window._isGeneratingResumenPDF = false;
         console.error('Error generando PDF de Resumen:', err);
         alert('Ocurrió un error al generar el PDF de resumen. Revisa la consola para más detalles.');
         btnPdf.innerHTML = originalText;
         btnPdf.disabled = false;
+        if (btnFloating) {
+            btnFloating.innerHTML = originalFloatingText;
+            btnFloating.disabled = false;
+        }
     }
 }
 
@@ -4112,6 +4256,76 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        const btnFloatingExportResumenPdf = document.getElementById('btn-floating-export-resumen-pdf');
+        if (btnFloatingExportResumenPdf) {
+            btnFloatingExportResumenPdf.addEventListener('click', (e) => {
+                e.preventDefault();
+                generateResumenPDF();
+            });
+        }
+
+        // Lógica de visibilidad para el botón flotante de Exportar Resumen PDF
+        function updateFloatingResumenPdfButton() {
+            const btnFloating = document.getElementById('btn-floating-export-resumen-pdf');
+            if (!btnFloating) return;
+
+            const activeTabBtn = document.querySelector('.tab-btn.active');
+            const activeTab = activeTabBtn ? activeTabBtn.getAttribute('data-tab') : 'resumen';
+            const tabResumen = document.getElementById('tab-resumen');
+            const isTabResumenActive = (activeTab === 'resumen') && (!tabResumen || !tabResumen.classList.contains('hidden'));
+
+            if (isTabResumenActive) {
+                btnFloating.classList.remove('hidden');
+                btnFloating.style.display = 'inline-flex';
+            } else {
+                btnFloating.classList.add('hidden');
+                btnFloating.style.display = 'none';
+            }
+        }
+
+        window.updateFloatingResumenPdfButton = updateFloatingResumenPdfButton;
+        updateFloatingResumenPdfButton();
+
+        // --- FILTROS COLAPSABLES (OPTIMIZACIÓN MÓVIL Y DESKTOP) ---
+        let lastFilterToggleTime = 0;
+        window.toggleFilterPanel = function (forceState) {
+            const now = Date.now();
+            if (typeof forceState !== 'boolean' && (now - lastFilterToggleTime < 250)) {
+                return; // Evita doble disparo en móviles (click + touch / inline + listener)
+            }
+            lastFilterToggleTime = now;
+
+            const filterPanel = document.getElementById('filter-panel-collapsible');
+            const btn = document.getElementById('btn-toggle-filters');
+            const txt = document.getElementById('toggle-filters-text') || document.getElementById('btn-toggle-filters-text');
+            if (!filterPanel) return;
+
+            const isCurrentlyExpanded = filterPanel.classList.contains('expanded');
+            const targetState = (typeof forceState === 'boolean') ? forceState : !isCurrentlyExpanded;
+
+            if (targetState) {
+                filterPanel.classList.add('expanded');
+                if (btn) {
+                    btn.classList.add('active');
+                    btn.setAttribute('aria-expanded', 'true');
+                }
+                if (txt) txt.textContent = 'Ocultar Filtros';
+            } else {
+                filterPanel.classList.remove('expanded');
+                if (btn) {
+                    btn.classList.remove('active');
+                    btn.setAttribute('aria-expanded', 'false');
+                }
+                if (txt) txt.textContent = 'Mostrar Filtros';
+            }
+        };
+
+        const btnToggleFilters = document.getElementById('btn-toggle-filters');
+        if (btnToggleFilters) {
+            const isDesktopScreen = window.innerWidth >= 1024;
+            window.toggleFilterPanel(isDesktopScreen);
+        }
+
         const btnExportAlertsPdf = document.getElementById('btn-export-alerts-pdf');
         if (btnExportAlertsPdf) {
             btnExportAlertsPdf.addEventListener('click', () => {
@@ -4197,6 +4411,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (targetTab === 'portal' && typeof checkAndRenderPortal === 'function') {
                     checkAndRenderPortal();
                 }
+
+                if (typeof updateFloatingResumenPdfButton === 'function') {
+                    updateFloatingResumenPdfButton();
+                }
             });
         });
 
@@ -4237,6 +4455,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (typeof initVisitasControl === 'function') {
             initVisitasControl();
+        }
+        if (typeof setupPhotoManagerEvents === 'function') {
+            setupPhotoManagerEvents();
         }
         loadExcelFile();
     } catch (e) { console.error("Error inicial:", e); }
@@ -4499,6 +4720,7 @@ function processExcelData(data) {
     if (mainTabsNav) mainTabsNav.style.display = 'flex';
     const mainContent = document.getElementById('main-content');
     if (mainContent) mainContent.style.display = 'block';
+    if (typeof updateFloatingResumenPdfButton === 'function') updateFloatingResumenPdfButton();
 
     // Asignar subregión canónica solo si pertenece a una de las 9 subregiones oficiales
     rawData.forEach(r => {
@@ -4733,6 +4955,11 @@ window.showSummaryCard = function (conv) {
     // 7. Cerrar dropdown de alertas de navbar si estuviese abierto
     const drop = document.getElementById('nav-alerts-dropdown');
     if (drop) drop.classList.add('hidden');
+
+    // 8. Pre-cargar fotos del convenio en segundo plano
+    if (typeof window.prefetchConvenioPhotos === 'function') {
+        window.prefetchConvenioPhotos([cleanConv]);
+    }
 };
 
 window.hideSummaryCard = function () {
@@ -4783,6 +5010,16 @@ function applyFilters() {
             badge.classList.remove('hidden');
         } else {
             badge.classList.add('hidden');
+        }
+    }
+
+    const pill = document.getElementById('active-filters-pill');
+    if (pill) {
+        if (activeFiltersCount > 0) {
+            pill.textContent = activeFiltersCount;
+            pill.classList.remove('hidden');
+        } else {
+            pill.classList.add('hidden');
         }
     }
 
@@ -5035,6 +5272,10 @@ function renderTable() {
         tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-12 text-center text-slate-400 font-medium text-sm"><i class="fa-solid fa-folder-open text-3xl mb-3 block opacity-30"></i>No se encontraron convenios con los parámetros actuales.</td></tr>`;
         document.getElementById('table-info').textContent = `Mostrando 0 registros`;
         return;
+    }
+
+    if (typeof window.prefetchConvenioPhotos === 'function' && Array.isArray(paginated) && paginated.length > 0) {
+        window.prefetchConvenioPhotos(paginated.map(r => r['CONVENIO']));
     }
 
     paginated.forEach(row => {
@@ -6437,6 +6678,172 @@ async function renderMap(row, mapId, overlayId, msgId, inst, cb) {
     }
 }
 
+// =========================================================================
+// OPTIMIZACIÓN DE ALTO RENDIMIENTO PARA FOTOS DE GOOGLE DRIVE Y CDN
+// =========================================================================
+window.DIAT_DRIVE_PHOTOS_CACHE = window.DIAT_DRIVE_PHOTOS_CACHE || {};
+
+function getFastDriveImageUrl(url, width = 400) {
+    if (!url || typeof url !== 'string') return url;
+    if (url.startsWith('data:image/')) return url;
+    if (url.includes('lh3.googleusercontent.com/d/')) {
+        const cleanUrl = url.split('=s')[0];
+        return `${cleanUrl}=s${width}`;
+    }
+    const match = url.match(/(?:id=|\/file\/d\/|\/d\/)([a-zA-Z0-9_-]{25,})/);
+    if (match && match[1]) {
+        return `https://lh3.googleusercontent.com/d/${match[1]}=s${width}`;
+    }
+    return url;
+}
+
+window.DIAT_PREFETCH_QUEUE = window.DIAT_PREFETCH_QUEUE || new Set();
+window.prefetchConvenioPhotos = function (cidList) {
+    if (!cidList || !Array.isArray(cidList) || cidList.length === 0) return;
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwXBFslIOCwVCyAae8-FG0VL5pqotLkjejwJhavm5xoGU4SlyVETwRkGCmDNVkcRPw4/exec";
+
+    const toFetch = cidList.map(c => String(c).trim()).filter(cid => {
+        if (!cid || window.DIAT_DRIVE_PHOTOS_CACHE[cid] || window.DIAT_PREFETCH_QUEUE.has(cid)) return false;
+        try {
+            const raw = localStorage.getItem('diat_drive_cache_' + cid);
+            if (raw) {
+                window.DIAT_DRIVE_PHOTOS_CACHE[cid] = JSON.parse(raw);
+                return false;
+            }
+        } catch (e) { }
+        return true;
+    });
+
+    if (toFetch.length === 0) return;
+
+    let delay = 350;
+    toFetch.slice(0, 20).forEach((cid) => {
+        window.DIAT_PREFETCH_QUEUE.add(cid);
+        setTimeout(() => {
+            fetch(`${APPS_SCRIPT_URL}?convenio=${encodeURIComponent(cid)}`)
+                .then(r => r.ok ? r.json() : null)
+                .then(idx => {
+                    if (idx && ((idx.antes && idx.antes.length > 0) || (idx.durante && idx.durante.length > 0) || (idx.despues && idx.despues.length > 0))) {
+                        window.DIAT_DRIVE_PHOTOS_CACHE[cid] = idx;
+                        try {
+                            localStorage.setItem('diat_drive_cache_' + cid, JSON.stringify(idx));
+                            sessionStorage.setItem('diat_drive_cache_' + cid, JSON.stringify(idx));
+                        } catch (e) { }
+                    }
+                })
+                .catch(() => { })
+                .finally(() => {
+                    window.DIAT_PREFETCH_QUEUE.delete(cid);
+                });
+        }, delay);
+        delay += 400;
+    });
+};
+
+function hasConvenioPhotographicRecord(convenioId) {
+    const cid = String(convenioId).trim();
+    if (!cid) return false;
+
+    try {
+        const stored = localStorage.getItem('diat_photos_' + cid);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) return true;
+            if (parsed && typeof parsed === 'object') {
+                const total = (parsed.antes?.length || 0) + (parsed.durante?.length || 0) + (parsed.despues?.length || 0);
+                if (total > 0) return true;
+            }
+        }
+    } catch (e) { }
+
+    if (window.DIAT_DRIVE_PHOTOS_CACHE && window.DIAT_DRIVE_PHOTOS_CACHE[cid]) {
+        const d = window.DIAT_DRIVE_PHOTOS_CACHE[cid];
+        const total = (d.antes?.length || 0) + (d.durante?.length || 0) + (d.despues?.length || 0);
+        if (total > 0) return true;
+    }
+
+    try {
+        const rawCached = sessionStorage.getItem('diat_drive_cache_' + cid);
+        if (rawCached) {
+            const d = JSON.parse(rawCached);
+            const total = (d.antes?.length || 0) + (d.durante?.length || 0) + (d.despues?.length || 0);
+            if (total > 0) return true;
+        }
+    } catch (e) { }
+
+    if (window.DIATDataService && typeof window.DIATDataService.getTechnicalVisits === 'function') {
+        const visits = window.DIATDataService.getTechnicalVisits();
+        const hasVisitsPhotos = visits.some(v => String(v.convenioId).trim() === cid && v.photos && v.photos.length > 0);
+        if (hasVisitsPhotos) return true;
+    }
+
+    return false;
+}
+
+function getConvenioPhotosData(convenioId) {
+    const cid = String(convenioId).trim();
+    const result = {
+        antes: [],
+        durante: [],
+        despues: [],
+        total: 0
+    };
+
+    if (!cid) return result;
+
+    try {
+        const stored = localStorage.getItem('diat_photos_' + cid);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+                parsed.forEach(p => {
+                    const src = p.base64 || p.src || p;
+                    const stage = String(p.stage || 'despues').toLowerCase();
+                    if (stage.includes('ante')) result.antes.push(src);
+                    else if (stage.includes('dur')) result.durante.push(src);
+                    else result.despues.push(src);
+                });
+            } else if (parsed && typeof parsed === 'object') {
+                if (parsed.antes) result.antes.push(...parsed.antes);
+                if (parsed.durante) result.durante.push(...parsed.durante);
+                if (parsed.despues) result.despues.push(...parsed.despues);
+            }
+        }
+    } catch (e) { }
+
+    let driveData = (window.DIAT_DRIVE_PHOTOS_CACHE && window.DIAT_DRIVE_PHOTOS_CACHE[cid]) || null;
+    if (!driveData) {
+        try {
+            const raw = localStorage.getItem('diat_drive_cache_' + cid) || sessionStorage.getItem('diat_drive_cache_' + cid);
+            if (raw) {
+                driveData = JSON.parse(raw);
+                window.DIAT_DRIVE_PHOTOS_CACHE[cid] = driveData;
+            }
+        } catch (e) { }
+    }
+    if (driveData) {
+        if (driveData.antes) driveData.antes.forEach(u => { if (!result.antes.includes(u)) result.antes.push(u); });
+        if (driveData.durante) driveData.durante.forEach(u => { if (!result.durante.includes(u)) result.durante.push(u); });
+        if (driveData.despues) driveData.despues.forEach(u => { if (!result.despues.includes(u)) result.despues.push(u); });
+    }
+
+    if (window.DIATDataService && typeof window.DIATDataService.getTechnicalVisits === 'function') {
+        const visits = window.DIATDataService.getTechnicalVisits();
+        visits.filter(v => String(v.convenioId).trim() === cid).forEach(v => {
+            if (v.photos && Array.isArray(v.photos)) {
+                v.photos.forEach(ph => {
+                    if (!result.durante.includes(ph) && !result.despues.includes(ph)) {
+                        result.durante.push(ph);
+                    }
+                });
+            }
+        });
+    }
+
+    result.total = result.antes.length + result.durante.length + result.despues.length;
+    return result;
+}
+
 // ------ L�"GICA MODAL DETALLE ------
 function openModal(row) {
     const sysState = getSystemState(row['ESTADO CONVENIO']);
@@ -6516,37 +6923,41 @@ function openModal(row) {
     document.getElementById('mod-txt-financiero').textContent = pfn.toFixed(1) + '%';
     document.getElementById('mod-bar-financiero').style.width = pfn + '%';
 
-    // Renderizar historial de visitas en el modal de detalle del convenio
-    const detailVisitsList = document.getElementById('modal-detalle-visitas-list');
-    if (detailVisitsList) {
+    const detailVisitsContainer = document.getElementById('mod-detail-visits-container');
+    const detailVisitsList = document.getElementById('mod-detail-visits-list');
+    if (detailVisitsContainer && detailVisitsList) {
         detailVisitsList.innerHTML = '';
         if (window.DIATDataService) {
             const allVisits = window.DIATDataService.getTechnicalVisits();
-            const convenioVisits = allVisits.filter(v => String(v.convenioId).trim() === String(row['CONVENIO']).trim());
-            if (convenioVisits.length === 0) {
-                detailVisitsList.innerHTML = `<div class="text-center py-4 text-slate-400 font-medium text-xs italic">No se registran visitas técnicas para este convenio.</div>`;
+            const convVisits = allVisits.filter(v => String(v.convenioId).trim() === String(row['CONVENIO']).trim());
+
+            if (convVisits.length === 0) {
+                detailVisitsContainer.classList.add('hidden');
             } else {
-                convenioVisits.forEach(v => {
+                detailVisitsContainer.classList.remove('hidden');
+                convVisits.forEach(v => {
                     const item = document.createElement('div');
-                    item.className = 'p-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition cursor-pointer';
-
-                    let photosCountHtml = '';
-                    if (v.photos && v.photos.length > 0) {
-                        photosCountHtml = `<span class="text-institutional-primary font-bold"><i class="fa-solid fa-camera mr-1"></i>${v.photos.length} foto${v.photos.length > 1 ? 's' : ''}</span>`;
-                    }
-
+                    item.className = 'p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between hover:bg-slate-100 transition-all cursor-pointer';
                     item.innerHTML = `
-                        <div class="flex justify-between items-center mb-1.5">
-                            <span class="bg-institutional-pale text-institutional-primary px-1.5 py-0.5 rounded font-bold text-[9px] uppercase">${v.tipo}</span>
-                            <span class="text-[9px] text-slate-400 font-semibold">${v.fecha}</span>
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold shrink-0">
+                                <i class="fa-solid fa-clipboard-check"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-black text-slate-800">${v.fecha || 'Sin fecha'}</span>
+                                    <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded ${v.estado === 'Realizada' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${v.estado || 'Realizada'}</span>
+                                    <span class="text-[9px] font-bold text-slate-400 bg-white border border-slate-200 px-1.5 py-0.5 rounded">${v.tipo}</span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 font-medium truncate max-w-sm mt-0.5">${v.observaciones || 'Sin observaciones'}</p>
+                            </div>
                         </div>
-                        <p class="text-[10px] text-slate-600 line-clamp-2 leading-relaxed mb-1.5 font-medium">${v.observaciones || 'Sin observaciones.'}</p>
-                        <div class="flex justify-between items-center text-[9px] text-slate-400 font-semibold">
-                            <span>Por: ${v.usuario || 'N/A'}</span>
-                            ${photosCountHtml}
+                        <div class="flex items-center gap-3 shrink-0">
+                            ${(v.photos && v.photos.length > 0) ? `<span class="text-[10px] font-bold text-slate-400"><i class="fa-solid fa-image text-institutional-primary mr-1"></i>${v.photos.length}</span>` : ''}
+                            <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
                         </div>
                     `;
-                    item.addEventListener('click', (e) => {
+                    item.addEventListener('click', () => {
                         window.openVisitDetailModal(v.id);
                     });
                     detailVisitsList.appendChild(item);
@@ -6564,6 +6975,7 @@ function openModal(row) {
         });
     }, 250);
 
+
     const emp = document.getElementById('mod-galeria-empty');
     const galAntes = document.getElementById('mod-galeria-antes');
     const galDurante = document.getElementById('mod-galeria-durante');
@@ -6571,15 +6983,21 @@ function openModal(row) {
     if (galAntes) galAntes.innerHTML = '';
     if (galDurante) galDurante.innerHTML = '';
     if (galDespues) galDespues.innerHTML = '';
-    emp.classList.add('hidden'); currentGalleryImages = [];
+    if (emp) emp.classList.add('hidden');
+    currentGalleryImages = [];
     const n = String(row['CONVENIO']).trim();
+
+    const removeLoading = () => {
+        const el = document.getElementById('mod-galeria-loading');
+        if (el) el.remove();
+    };
 
     const updateGalleryVisibility = () => {
         const totalImgs = document.querySelectorAll('#mod-galeria img').length;
         if (totalImgs > 0) {
-            emp.classList.add('hidden');
+            if (emp) emp.classList.add('hidden');
         } else {
-            emp.classList.remove('hidden');
+            if (emp) emp.classList.remove('hidden');
         }
 
         [
@@ -6587,136 +7005,102 @@ function openModal(row) {
             { gal: galDurante },
             { gal: galDespues }
         ].forEach(item => {
-            if (item.gal) {
+            if (item.gal && item.gal.parentElement) {
                 const imgs = item.gal.querySelectorAll('img').length;
-                if (imgs === 0 && item.gal.parentElement) {
+                if (imgs === 0) {
                     item.gal.parentElement.classList.add('hidden');
-                } else if (item.gal.parentElement) {
+                } else {
                     item.gal.parentElement.classList.remove('hidden');
                 }
             }
         });
     };
 
-    // ── Carga de fotos desde index.json (soporta cualquier nombre de archivo) ──
+    // ── Carga de fotos ultra optimizada con CDN de Google (320px) y Lazy Loading ──
     const addPhotoToGallery = (src, label, container) => {
+        if (!container || !src) return;
         const domImg = document.createElement('img');
-        domImg.className = 'w-full h-24 object-cover rounded-lg cursor-pointer hover:ring-2 hover:ring-institutional-light transition-all shadow-sm';
+        domImg.className = 'w-full h-24 object-cover rounded-lg cursor-pointer hover:ring-2 hover:ring-institutional-light transition-all shadow-sm bg-slate-800';
         domImg.setAttribute('data-stage', label);
         domImg.setAttribute('data-folder', label);
-        domImg.onload = () => { container.appendChild(domImg); updateGalleryVisibility(); };
-        domImg.onerror = () => domImg.remove();
-        domImg.onclick = () => {
-            currentGalleryImages = Array.from(document.querySelectorAll('#mod-galeria img')).map(e => e.src);
-            openLightbox(currentGalleryImages.indexOf(domImg.src));
+        domImg.setAttribute('data-fullsrc', src);
+        domImg.setAttribute('referrerpolicy', 'no-referrer');
+        domImg.loading = 'lazy';
+        domImg.decoding = 'async';
+        const fastSrc = (typeof getFastDriveImageUrl === 'function') ? getFastDriveImageUrl(src, 320) : src;
+        domImg.src = fastSrc;
+        domImg.onerror = () => {
+            if (domImg.src !== src) {
+                domImg.src = src;
+            } else {
+                domImg.remove();
+                updateGalleryVisibility();
+            }
         };
-        domImg.src = src;
-    };
-
-    const removeLoading = () => {
-        const el = document.getElementById('mod-galeria-loading');
-        if (el) el.remove();
-    };
-
-    // Mostrar indicador de carga
-    let loadingEl = document.getElementById('mod-galeria-loading');
-    if (!loadingEl) {
-        loadingEl = document.createElement('div');
-        loadingEl.id = 'mod-galeria-loading';
-        loadingEl.className = 'flex flex-col items-center justify-center py-12 text-slate-400 gap-2 font-medium text-xs w-full';
-        loadingEl.innerHTML = `
-            <i class="fa-solid fa-spinner fa-spin text-lg text-white/50"></i>
-            <span class="text-white/50">Cargando fotos desde Google Drive...</span>
-        `;
-    }
-    const modGaleria = document.getElementById('mod-galeria');
-    if (modGaleria) {
-        modGaleria.appendChild(loadingEl);
-    }
-
-    const loadLocalStoragePhotos = () => {
-        try {
-            const localPhotos = JSON.parse(localStorage.getItem('diat_photos_' + n)) || [];
-            localPhotos.forEach(photo => {
-                if (photo && photo.base64 && galDespues) {
-                    addPhotoToGallery(photo.base64, 'Después', galDespues);
-                }
+        domImg.onclick = () => {
+            currentGalleryImages = Array.from(document.querySelectorAll('#mod-galeria img')).map(e => {
+                const raw = e.getAttribute('data-fullsrc') || e.src;
+                return (typeof getFastDriveImageUrl === 'function') ? getFastDriveImageUrl(raw, 1600) : raw;
             });
-        } catch (e) {
-            console.error("Error cargando fotos de localStorage:", e);
+            const allImgs = Array.from(document.querySelectorAll('#mod-galeria img'));
+            const idx = allImgs.indexOf(domImg);
+            if (typeof openLightbox === 'function') {
+                openLightbox(idx >= 0 ? idx : 0);
+            }
+        };
+        container.appendChild(domImg);
+        if (container.parentElement) {
+            container.parentElement.classList.remove('hidden');
         }
-        removeLoading();
-        updateGalleryVisibility();
     };
 
-    const loadLocalPhotosFallback = () => {
-        fetch(`./assets/fotos/${n}/index.json`)
+    // 1. OBTENER FOTOS UNIFICADAS INMEDIATAMENTE (LocalStorage + Drive Cache + Visitas Técnicas)
+    const photoData = (typeof getConvenioPhotosData === 'function') ? getConvenioPhotosData(n) : { antes: [], durante: [], despues: [], total: 0 };
+
+    if (photoData && photoData.total > 0) {
+        removeLoading();
+        if (photoData.antes && galAntes) photoData.antes.forEach(u => addPhotoToGallery(u, 'Antes', galAntes));
+        if (photoData.durante && galDurante) photoData.durante.forEach(u => addPhotoToGallery(u, 'Durante', galDurante));
+        if (photoData.despues && galDespues) photoData.despues.forEach(u => addPhotoToGallery(u, 'Después', galDespues));
+        updateGalleryVisibility();
+    } else {
+        // Mostrar indicador de carga mientras se consulta Google Apps Script
+        let loadingEl = document.getElementById('mod-galeria-loading');
+        if (!loadingEl) {
+            loadingEl = document.createElement('div');
+            loadingEl.id = 'mod-galeria-loading';
+            loadingEl.className = 'flex flex-col items-center justify-center py-12 text-slate-400 gap-2 font-medium text-xs w-full';
+            loadingEl.innerHTML = `
+                <i class="fa-solid fa-spinner fa-spin text-lg text-white/50"></i>
+                <span class="text-white/50">Cargando fotos desde Google Drive...</span>
+            `;
+            const modGaleria = document.getElementById('mod-galeria');
+            if (modGaleria) modGaleria.appendChild(loadingEl);
+        }
+
+        const appsScriptUrl = "https://script.google.com/macros/s/AKfycbwXBFslIOCwVCyAae8-FG0VL5pqotLkjejwJhavm5xoGU4SlyVETwRkGCmDNVkcRPw4/exec";
+        fetch(`${appsScriptUrl}?convenio=${encodeURIComponent(n)}`)
             .then(r => r.ok ? r.json() : null)
             .then(idx => {
-                if (idx) {
-                    const loadFromIndex = (fileList, container, label) => {
-                        if (!container || !fileList || fileList.length === 0) return;
-                        fileList.forEach(relPath => {
-                            addPhotoToGallery(`./assets/fotos/${n}/${relPath}`, label, container);
-                        });
-                    };
-                    loadFromIndex(idx.antes, galAntes, 'Antes');
-                    loadFromIndex(idx.durante, galDurante, 'Durante');
-                    loadFromIndex(idx.despues, galDespues, 'Después');
-                } else {
-                    const extensions = ['jpg', 'jpeg', 'png', 'jfif', 'JPG', 'JPEG', 'PNG', 'JFIF'];
-                    const loadImages = (foldersList, container, label) => {
-                        if (!container) return;
-                        for (let i = 1; i <= 15; i++) {
-                            let found = false;
-                            const tryCombination = (fi, ei) => {
-                                if (found || fi >= foldersList.length) return;
-                                if (ei >= extensions.length) { tryCombination(fi + 1, 0); return; }
-                                const img = new Image();
-                                const src = `./assets/fotos/${n}/${foldersList[fi]}/${i}.${extensions[ei]}`;
-                                img.onload = () => { if (found) return; found = true; addPhotoToGallery(src, label, container); };
-                                img.onerror = () => tryCombination(fi, ei + 1);
-                                img.src = src;
-                            };
-                            tryCombination(0, 0);
-                        }
-                    };
-                    loadImages(['Antes', 'antes'], galAntes, 'Antes');
-                    loadImages(['Durante', 'durante'], galDurante, 'Durante');
-                    loadImages(['Despues', 'Después', 'despues', 'después'], galDespues, 'Después');
+                removeLoading();
+                const hasPhotos = idx && ((idx.antes && idx.antes.length > 0) || (idx.durante && idx.durante.length > 0) || (idx.despues && idx.despues.length > 0));
+                if (hasPhotos) {
+                    window.DIAT_DRIVE_PHOTOS_CACHE[n] = idx;
+                    try {
+                        localStorage.setItem('diat_drive_cache_' + n, JSON.stringify(idx));
+                        sessionStorage.setItem('diat_drive_cache_' + n, JSON.stringify(idx));
+                    } catch (e) { }
+                    if (idx.antes && galAntes) idx.antes.forEach(u => addPhotoToGallery(u, 'Antes', galAntes));
+                    if (idx.durante && galDurante) idx.durante.forEach(u => addPhotoToGallery(u, 'Durante', galDurante));
+                    if (idx.despues && galDespues) idx.despues.forEach(u => addPhotoToGallery(u, 'Después', galDespues));
                 }
+                updateGalleryVisibility();
             })
-            .catch(() => { /* sin fotos o sin acceso */ })
-            .finally(() => {
-                loadLocalStoragePhotos();
+            .catch(() => {
+                removeLoading();
+                updateGalleryVisibility();
             });
-    };
-
-    const appsScriptUrl = "https://script.google.com/macros/s/AKfycbwXBFslIOCwVCyAae8-FG0VL5pqotLkjejwJhavm5xoGU4SlyVETwRkGCmDNVkcRPw4/exec";
-    fetch(`${appsScriptUrl}?convenio=${encodeURIComponent(n)}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(idx => {
-            const hasPhotos = idx && ((idx.antes && idx.antes.length > 0) || (idx.durante && idx.durante.length > 0) || (idx.despues && idx.despues.length > 0));
-            if (hasPhotos) {
-                const loadFromIndex = (fileList, container, label) => {
-                    if (!container || !fileList || fileList.length === 0) return;
-                    fileList.forEach(url => {
-                        addPhotoToGallery(url, label, container);
-                    });
-                };
-                loadFromIndex(idx.antes, galAntes, 'Antes');
-                loadFromIndex(idx.durante, galDurante, 'Durante');
-                loadFromIndex(idx.despues, galDespues, 'Después');
-                loadLocalStoragePhotos();
-            } else {
-                loadLocalPhotosFallback();
-            }
-        })
-        .catch(() => {
-            loadLocalPhotosFallback();
-        });
-
-    setTimeout(updateGalleryVisibility, 2000);
+    }
 }
 
 function closeModal() {
@@ -6732,8 +7116,12 @@ function openLightbox(i) { currentImageIndex = i; updateLightbox(); document.get
 function closeLightbox() { document.getElementById('modal-lightbox').classList.add('hidden'); }
 function updateLightbox() {
     if (currentGalleryImages.length === 0) return;
-    const im = document.getElementById('lightbox-img'); im.style.opacity = 0;
-    setTimeout(() => { im.src = currentGalleryImages[currentImageIndex]; im.style.opacity = 1; }, 150);
+    const im = document.getElementById('lightbox-img');
+    if (!im) return;
+    im.style.opacity = 0;
+    const rawSrc = currentGalleryImages[currentImageIndex];
+    const fullSrc = (typeof getFastDriveImageUrl === 'function') ? getFastDriveImageUrl(rawSrc, 1600) : rawSrc;
+    setTimeout(() => { im.src = fullSrc; im.style.opacity = 1; }, 150);
     document.getElementById('lightbox-counter').textContent = `${currentImageIndex + 1} / ${currentGalleryImages.length}`;
     const bp = document.getElementById('btn-prev-img'), bn = document.getElementById('btn-next-img');
     if (currentGalleryImages.length > 1) { bp.classList.remove('hidden'); bn.classList.remove('hidden'); } else { bp.classList.add('hidden'); bn.classList.add('hidden'); }
@@ -9762,10 +10150,20 @@ function normalizeSupervisorName(str) {
         .trim();
 }
 
-// Obtiene las filas de rawData asignadas al supervisor actualmente logueado
+// Obtiene las filas de rawData asignadas al supervisor actualmente logueado o todas si es ADMIN
 function getSupervisorRows() {
     const user = getLoggedUser();
     if (!user) return [];
+    const isAdmin = (user.username === 'ADMIN' || (user.role && user.role.toUpperCase().includes('ADMIN')) || window.diatAdminAuthorized);
+    if (isAdmin) {
+        const filterSupEl = document.getElementById('portal-admin-supervisor-filter');
+        const selectedSup = filterSupEl ? filterSupEl.value.trim() : 'ALL';
+        if (selectedSup && selectedSup !== 'ALL') {
+            const normSelected = normalizeSupervisorName(selectedSup);
+            return rawData.filter(row => normalizeSupervisorName(row['SUPERVISOR']) === normSelected);
+        }
+        return rawData;
+    }
     const excelName = user.supervisorExcelName || user.name;
     const normalizedTarget = normalizeSupervisorName(excelName);
     return rawData.filter(row => {
@@ -9823,7 +10221,7 @@ function initSupervisorPortal() {
                 if (authResult.success && authResult.user) {
                     const userObj = authResult.user;
                     const rememberMe = document.getElementById('login-remember') && document.getElementById('login-remember').checked;
-                    
+
                     if (rememberMe) {
                         localStorage.setItem('diat_logged_user', JSON.stringify(userObj));
                         sessionStorage.removeItem('diat_logged_user');
@@ -9864,17 +10262,9 @@ function initSupervisorPortal() {
                         alertToast('Sesión Iniciada', 'Bienvenido, ' + userObj.name + '.');
                     }
                 } else {
-                    const errorMsg = authResult.error || 'Clave incorrecta. Recuerda que la clave provisional inicial es DIAT2026.';
+                    const errorMsg = authResult.error || 'Contraseña incorrecta. Por favor verifica tus credenciales o contacta al Administrador DIAT.';
                     if (errBox && errText) {
-                        let html = `<span>${errorMsg}</span>`;
-                        if (authResult.canReset || errorMsg.includes('personalizada') || errorMsg.includes('provisional')) {
-                            const uKey = String(rawInp || '').trim().toUpperCase();
-                            html += `<div class="mt-2 pt-2 border-t border-red-200/80 flex items-center justify-between gap-2">
-                                <span class="text-red-800 font-semibold text-[11px]">¿No recuerdas tu clave personalizada?</span>
-                                <button type="button" onclick="window.resetUserPassword('${uKey}');" class="px-2.5 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-900 font-bold text-[11px] transition">Restablecer a DIAT2026</button>
-                            </div>`;
-                        }
-                        errText.innerHTML = html;
+                        errText.innerHTML = `<span>${errorMsg}</span>`;
                         errBox.classList.remove('hidden');
                     }
                     alertToast('Credenciales Incorrectas', errorMsg, 'error');
@@ -10000,7 +10390,7 @@ function initSupervisorPortal() {
                 const targetU = window._pendingChangeUser || (getLoggedUser()?.username);
                 await window.DIATDataService.updateUserPassword(newPw, targetU);
                 document.getElementById('modal-force-password-change').classList.add('hidden');
-                
+
                 // Asegurar que el usuario activo quede marcado sin requerir cambio
                 const currentLog = getLoggedUser();
                 if (currentLog) {
@@ -10008,7 +10398,7 @@ function initSupervisorPortal() {
                     if (sessionStorage.getItem('diat_logged_user')) sessionStorage.setItem('diat_logged_user', JSON.stringify(currentLog));
                     if (localStorage.getItem('diat_logged_user')) localStorage.setItem('diat_logged_user', JSON.stringify(currentLog));
                 }
-                
+
                 checkAuthStatus();
 
                 const portalTabBtn = document.querySelector('.tab-btn[data-tab="portal"]');
@@ -10118,7 +10508,7 @@ function initSupervisorPortal() {
             try {
                 const targetU = getLoggedUser()?.username;
                 await window.DIATDataService.updateUserPassword(newPw, targetU);
-                
+
                 const currentLog = getLoggedUser();
                 if (currentLog) {
                     currentLog.passwordCustomized = true;
@@ -10177,7 +10567,7 @@ function initSupervisorPortal() {
             try {
                 const authRes = await window.DIATDataService.loginUser(u, p);
                 const isAuthAdmin = authRes.success && authRes.user && (
-                    authRes.user.username === 'ADMIN' || 
+                    authRes.user.username === 'ADMIN' ||
                     (authRes.user.role && authRes.user.role.toLowerCase().includes('administrador'))
                 );
 
@@ -10304,6 +10694,9 @@ function initSupervisorPortal() {
             if (panel) panel.classList.remove('hidden');
             if (target === 'auditoria' && typeof window.renderAuditoriaTab === 'function') {
                 window.renderAuditoriaTab();
+            }
+            if (target === 'supervisores' && typeof window.renderAdminSupervisoresPanel === 'function') {
+                window.renderAdminSupervisoresPanel();
             }
         });
     });
@@ -10432,7 +10825,7 @@ function initSupervisorPortal() {
             try {
                 const targetU = getLoggedUser()?.username;
                 await window.DIATDataService.updateUserPassword(newPw, targetU);
-                
+
                 const currentLog = getLoggedUser();
                 if (currentLog) {
                     currentLog.passwordCustomized = true;
@@ -10934,6 +11327,12 @@ function initSupervisorPortal() {
     const btnRegistrarPortal = document.getElementById('btn-registrar-visita-portal');
     if (btnRegistrarPortal) {
         btnRegistrarPortal.addEventListener('click', () => {
+            const currentUser = getLoggedUser();
+            if (window.DIATDataService && !window.DIATDataService.hasPermission(currentUser, 'canCreateVisits')) {
+                alertToast('Acceso Denegado', 'No tienes permisos asignados para registrar visitas en terreno.', 'warning');
+                return;
+            }
+
             const supervisorRows = getSupervisorRows();
             if (supervisorRows.length === 0) {
                 alertToast('Sin convenios', 'No tienes convenios asignados para registrar visitas.', 'warning');
@@ -11016,6 +11415,12 @@ function initSupervisorPortal() {
             const convenioId = document.getElementById('edit-general-id').value;
             const row = rawData.find(r => String(r['CONVENIO']).trim() === String(convenioId).trim());
             if (!row) return;
+
+            const currentUser = getLoggedUser();
+            if (window.DIATDataService && !window.DIATDataService.hasPermission(currentUser, 'canEditConvenios')) {
+                alertToast("Acceso Denegado", "No tienes permisos asignados para editar convenios. Consulta con el Administrador DIAT.", "error");
+                return;
+            }
 
             const estado = document.getElementById('edit-general-estado').value;
             const fisico = parseFloat(document.getElementById('edit-seg-fisico').value) || 0;
@@ -11229,7 +11634,7 @@ function checkAuthStatus() {
         // Actualizar avatar y título de bienvenida del portal
         const portalAvatar = document.getElementById('portal-user-avatar');
         if (portalAvatar) portalAvatar.textContent = user.initials || 'SP';
-        
+
         const portalWelcome = document.getElementById('portal-welcome-title');
         if (portalWelcome) portalWelcome.textContent = `Bienvenido, ${user.name}`;
 
@@ -11398,17 +11803,57 @@ function renderSupervisorPortal() {
     renderSupervisorVisitasTable(supervisorRows);
     renderSupervisorHistorialTable(supervisorRows);
 
-    // 5. Visibilidad y precarga de Bitácora de Auditoría para Administrador
+    // 5. Configuración diferenciada para ADMINISTRADOR vs SUPERVISOR
     const loggedU = getLoggedUser();
-    const isAdmin = (loggedU && loggedU.username === 'ADMIN') || window.diatAdminAuthorized;
+    const isAdmin = (loggedU && (loggedU.username === 'ADMIN' || (loggedU.role && loggedU.role.toUpperCase().includes('ADMIN')))) || window.diatAdminAuthorized;
+
+    const adminToolbar = document.getElementById('portal-admin-toolbar');
+    const adminFilterSelect = document.getElementById('portal-admin-supervisor-filter');
+    const supervisoresSubtabBtn = document.getElementById('btn-portal-subtab-supervisores');
     const auditSubtabBtn = document.getElementById('btn-portal-subtab-auditoria');
-    if (auditSubtabBtn) {
-        auditSubtabBtn.style.display = isAdmin ? 'inline-flex' : 'none';
-        if (isAdmin && window.DIATDataService) {
-            window.DIATDataService.getAuditLogs(100).then(logs => {
-                const countBadge = document.getElementById('badge-count-auditoria');
-                if (countBadge) countBadge.textContent = (logs || []).length;
-            }).catch(() => {});
+    const conveniosSubtabLabel = document.getElementById('portal-subtab-convenios-label');
+    const welcomeTitle = document.getElementById('portal-welcome-title');
+    const roleBadge = document.getElementById('portal-user-role-badge');
+    const subregionsBadge = document.getElementById('portal-user-subregions');
+
+    if (isAdmin) {
+        if (welcomeTitle) welcomeTitle.textContent = 'Panel de Control Administrativo — DIAT Antioquia';
+        if (roleBadge) roleBadge.textContent = 'Superadministrador DIAT (Acceso Total)';
+        if (subregionsBadge) subregionsBadge.textContent = '125 Municipios • 9 Subregiones';
+        if (conveniosSubtabLabel) conveniosSubtabLabel.textContent = 'Todos los Convenios';
+
+        if (adminToolbar) adminToolbar.classList.remove('hidden');
+        if (supervisoresSubtabBtn) {
+            supervisoresSubtabBtn.style.display = 'inline-flex';
+            const supBadge = document.getElementById('badge-count-supervisores');
+            const totalSupCount = Object.keys(PORTAL_USERS).filter(k => k !== 'ADMIN').length;
+            if (supBadge) supBadge.textContent = totalSupCount;
+        }
+
+        if (adminFilterSelect && adminFilterSelect.options.length <= 1) {
+            populateAdminSupervisorFilter();
+        }
+
+        if (auditSubtabBtn) {
+            auditSubtabBtn.style.display = 'inline-flex';
+            if (window.DIATDataService) {
+                window.DIATDataService.getAuditLogs(100).then(logs => {
+                    const countBadge = document.getElementById('badge-count-auditoria');
+                    if (countBadge) countBadge.textContent = (logs || []).length;
+                }).catch(() => { });
+            }
+        }
+    } else {
+        if (adminToolbar) adminToolbar.classList.add('hidden');
+        if (supervisoresSubtabBtn) supervisoresSubtabBtn.style.display = 'none';
+        if (auditSubtabBtn) auditSubtabBtn.style.display = 'none';
+        if (conveniosSubtabLabel) conveniosSubtabLabel.textContent = 'Mis Convenios';
+        if (welcomeTitle && loggedU) welcomeTitle.textContent = `Bienvenido, ${loggedU.name}`;
+        if (roleBadge && loggedU) roleBadge.textContent = loggedU.role || 'Supervisor Técnico DIAT';
+        if (subregionsBadge && loggedU) {
+            const myRows = rawData.filter(r => normalizeSupervisorName(r['SUPERVISOR']) === normalizeSupervisorName(loggedU.supervisorExcelName || loggedU.name));
+            const subregiones = [...new Set(myRows.map(r => r['SUBREGION']).filter(Boolean))];
+            subregionsBadge.textContent = subregiones.length > 0 ? subregiones.join(', ') : 'Subregiones Asignadas';
         }
     }
 }
@@ -11563,7 +12008,7 @@ function renderSupervisorCharts(supervisorRows) {
 }
 
 // Filtra dinámicamente los convenios del supervisor con el buscador y chips
-window.filterSupervisorConvenios = function() {
+window.filterSupervisorConvenios = function () {
     const supervisorRows = getSupervisorRows();
     const searchInp = document.getElementById('portal-convenios-search');
     const query = searchInp ? searchInp.value.trim().toLowerCase() : '';
@@ -11592,6 +12037,9 @@ window.filterSupervisorConvenios = function() {
             const fis = r['FISICO_NORM'] || 0;
             return fin > fis + 15;
         }
+        if (filterType === 'sin-fotos') {
+            return !hasConvenioPhotographicRecord(String(r['CONVENIO']).trim());
+        }
 
         return true;
     });
@@ -11608,6 +12056,10 @@ function renderSupervisorConveniosGrid(rows) {
     const grid = document.getElementById('portal-convenios-grid');
     if (!grid) return;
     grid.innerHTML = '';
+
+    if (typeof window.prefetchConvenioPhotos === 'function' && Array.isArray(rows) && rows.length > 0) {
+        window.prefetchConvenioPhotos(rows.map(r => r['CONVENIO']));
+    }
 
     if (!rows || rows.length === 0) {
         grid.innerHTML = `
@@ -11633,6 +12085,27 @@ function renderSupervisorConveniosGrid(rows) {
         const sysState = getSystemState(estado);
         const hasDesfase = financiero > fisico + 15;
 
+        // Estado del registro fotográfico del convenio
+        const photoData = getConvenioPhotosData(id);
+        const hasPhotos = photoData.total > 0;
+        const photoAlertHtml = hasPhotos ? `
+            <div class="portal-convenio-photos-badge">
+                <span class="flex items-center gap-1.5 truncate">
+                    <i class="fa-solid fa-camera text-institutional-primary"></i>
+                    <span><strong>${photoData.total}</strong> foto${photoData.total > 1 ? 's' : ''} (${photoData.antes.length} ant / ${photoData.durante.length} dur / ${photoData.despues.length} desp)</span>
+                </span>
+                <button type="button" class="text-[10px] font-black text-institutional-primary hover:underline shrink-0" onclick="openConvenioPhotoManager('${id}')">Gestionar</button>
+            </div>
+        ` : `
+            <div class="portal-convenio-alert-no-photos">
+                <span class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500 text-xs"></i>
+                    <span>Sin registro fotográfico</span>
+                </span>
+                <button type="button" class="text-[10px] font-black text-amber-800 underline hover:text-amber-950 shrink-0" onclick="openConvenioPhotoManager('${id}')">Cargar Fotos</button>
+            </div>
+        `;
+
         const card = document.createElement('div');
         card.className = 'portal-convenio-card-v2';
         card.innerHTML = `
@@ -11647,12 +12120,13 @@ function renderSupervisorConveniosGrid(rows) {
                                 <i class="fa-regular fa-copy"></i>
                             </button>
                         </span>
-                        <div class="flex items-center gap-1.5 mt-1">
+                        <div class="flex items-center gap-1.5 mt-1 flex-wrap">
                             <span class="text-xs font-black text-slate-700 flex items-center gap-1">
                                 <i class="fa-solid fa-location-dot text-institutional-primary text-[11px]"></i>
                                 ${municipio}
                             </span>
                             ${subregion ? `<span class="text-[9.5px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">${subregion}</span>` : ''}
+                            ${row['SUPERVISOR'] ? `<span class="text-[9.5px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1 truncate max-w-[170px]" title="Supervisor Asignado: ${row['SUPERVISOR']}"><i class="fa-solid fa-user-tie text-[9px] text-amber-600"></i>${row['SUPERVISOR']}</span>` : ''}
                         </div>
                     </div>
                     <span class="badge-estado ${sysState.badgeClass} text-[9.5px] font-extrabold uppercase tracking-wider">
@@ -11707,21 +12181,30 @@ function renderSupervisorConveniosGrid(rows) {
                             <span>+${(financiero - fisico).toFixed(1)}% financiero</span>
                         </div>
                     ` : ''}
+
+                    ${photoAlertHtml}
                 </div>
             </div>
 
             <!-- Acciones Rápidas -->
             <div class="portal-card-actions-bar">
-                <button type="button" class="portal-card-btn-edit" onclick="openEditConvenioModal('${id}')">
-                    <i class="fa-solid fa-pen-to-square text-xs"></i>
-                    <span>Actualizar</span>
-                </button>
-                <button type="button" class="portal-card-btn-visit" onclick="openNewVisitForConvenio('${id}')">
-                    <i class="fa-solid fa-camera text-xs"></i>
-                    <span>+ Visita</span>
-                </button>
+                <div class="portal-card-actions-grid">
+                    <button type="button" class="portal-card-btn-edit" onclick="openEditConvenioModal('${id}')">
+                        <i class="fa-solid fa-pen-to-square text-xs"></i>
+                        <span>Actualizar</span>
+                    </button>
+                    <button type="button" class="portal-card-btn-photos" onclick="openConvenioPhotoManager('${id}')" title="Administrar Registro Fotográfico (Antes, Durante, Después)">
+                        <i class="fa-solid fa-camera-retro text-xs"></i>
+                        <span>Fotos</span>
+                    </button>
+                    <button type="button" class="portal-card-btn-visit" onclick="openNewVisitForConvenio('${id}')">
+                        <i class="fa-solid fa-calendar-plus text-xs"></i>
+                        <span>+ Visita</span>
+                    </button>
+                </div>
                 <button type="button" class="portal-card-btn-detail" onclick="openConvenioDetailById('${id}')" title="Ver ficha técnica completa">
-                    <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-xs text-institutional-primary"></i>
+                    <span>Ver Ficha Técnica</span>
                 </button>
             </div>
         `;
@@ -11729,8 +12212,365 @@ function renderSupervisorConveniosGrid(rows) {
     });
 }
 
+// =========================================================================
+// MÓDULO DE GESTIÓN FOTOGRÁFICA DEL CONVENIO (PORTAL SUPERVISOR)
+// =========================================================================
+window.activePhotoMgrConvenioId = null;
+window.activePhotoMgrViewStage = 'todas';
+window.activePhotoMgrUploadStage = 'durante';
+
+window.openConvenioPhotoManager = async function (convenioId) {
+    const currentUser = getLoggedUser();
+    if (window.DIATDataService && !window.DIATDataService.hasPermission(currentUser, 'canManagePhotos')) {
+        alertToast('Acceso Denegado', 'No tienes permisos asignados para gestionar fotografías.', 'warning');
+        return;
+    }
+
+    const cid = String(convenioId).trim();
+    window.activePhotoMgrConvenioId = cid;
+    window.activePhotoMgrViewStage = 'todas';
+    window.activePhotoMgrUploadStage = 'durante';
+
+    const modal = document.getElementById('modal-gestionar-fotos-convenio');
+    if (!modal) return;
+
+    const row = (rawData || []).find(r => String(r['CONVENIO']).trim() === cid) || {};
+    const municipio = row['MUNICIPIO'] || 'Antioquia';
+    const objeto = row['OBJETO'] || 'Sin descripción de objeto registrado';
+
+    const titleId = document.getElementById('photo-mgr-convenio-id');
+    if (titleId) titleId.textContent = cid;
+
+    const subtitle = document.getElementById('photo-mgr-subtitle');
+    if (subtitle) subtitle.textContent = `${municipio} — ${objeto.length > 90 ? objeto.substring(0, 90) + '...' : objeto}`;
+
+    // Reset upload stage buttons
+    document.querySelectorAll('.photo-upload-stage-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.stage === window.activePhotoMgrUploadStage);
+    });
+
+    // Reset view tabs
+    document.querySelectorAll('.photo-mgr-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.stage === 'todas');
+    });
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // Intento de pre-cargar desde caché local o memoria para render inmediato
+    if (!window.DIAT_DRIVE_PHOTOS_CACHE[cid]) {
+        try {
+            const raw = localStorage.getItem('diat_drive_cache_' + cid) || sessionStorage.getItem('diat_drive_cache_' + cid);
+            if (raw) {
+                window.DIAT_DRIVE_PHOTOS_CACHE[cid] = JSON.parse(raw);
+            }
+        } catch (e) { }
+    }
+
+    if (!window.DIAT_DRIVE_PHOTOS_CACHE[cid]) {
+        try {
+            const scriptUrl = `https://script.google.com/macros/s/AKfycbwXBFslIOCwVCyAae8-FG0VL5pqotLkjejwJhavm5xoGU4SlyVETwRkGCmDNVkcRPw4/exec?convenio=${encodeURIComponent(cid)}`;
+            fetch(scriptUrl).then(r => r.ok ? r.json() : null).then(idx => {
+                if (idx && ((idx.antes && idx.antes.length > 0) || (idx.durante && idx.durante.length > 0) || (idx.despues && idx.despues.length > 0))) {
+                    window.DIAT_DRIVE_PHOTOS_CACHE[cid] = idx;
+                    try {
+                        localStorage.setItem('diat_drive_cache_' + cid, JSON.stringify(idx));
+                        sessionStorage.setItem('diat_drive_cache_' + cid, JSON.stringify(idx));
+                    } catch (e) { }
+                    renderPhotoManagerGallery();
+                }
+            }).catch(() => { });
+        } catch (e) { }
+    }
+
+    renderPhotoManagerGallery();
+};
+
+window.closeConvenioPhotoManager = function () {
+    const modal = document.getElementById('modal-gestionar-fotos-convenio');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+    document.body.style.overflow = 'auto';
+    window.activePhotoMgrConvenioId = null;
+    // Refrescar tarjetas del supervisor para actualizar alertas/contadores
+    if (typeof filterSupervisorConvenios === 'function') {
+        filterSupervisorConvenios();
+    }
+};
+
+function renderPhotoManagerGallery() {
+    const cid = window.activePhotoMgrConvenioId;
+    if (!cid) return;
+
+    const data = getConvenioPhotosData(cid);
+
+    // Actualizar contadores en tabs
+    const cTodas = document.getElementById('photo-count-todas');
+    const cAntes = document.getElementById('photo-count-antes');
+    const cDurante = document.getElementById('photo-count-durante');
+    const cDespues = document.getElementById('photo-count-despues');
+    if (cTodas) cTodas.textContent = data.total;
+    if (cAntes) cAntes.textContent = data.antes.length;
+    if (cDurante) cDurante.textContent = data.durante.length;
+    if (cDespues) cDespues.textContent = data.despues.length;
+
+    const statusBadge = document.getElementById('photo-mgr-status-badge');
+    if (statusBadge) {
+        statusBadge.textContent = `${data.total} foto${data.total !== 1 ? 's' : ''}`;
+        statusBadge.className = data.total > 0
+            ? 'px-2 py-0.5 text-[10px] font-black rounded-full bg-emerald-100 text-emerald-800'
+            : 'px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-100 text-amber-800';
+    }
+
+    const grid = document.getElementById('photo-mgr-gallery-grid');
+    const countLabel = document.getElementById('photo-mgr-gallery-count');
+    const galleryTitle = document.getElementById('photo-mgr-gallery-title');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const stage = window.activePhotoMgrViewStage || 'todas';
+
+    let photosToDisplay = [];
+    if (stage === 'todas') {
+        data.antes.forEach((p, i) => photosToDisplay.push({ src: p, stage: 'Antes', stageKey: 'antes', idx: i }));
+        data.durante.forEach((p, i) => photosToDisplay.push({ src: p, stage: 'Durante', stageKey: 'durante', idx: i }));
+        data.despues.forEach((p, i) => photosToDisplay.push({ src: p, stage: 'Después', stageKey: 'despues', idx: i }));
+        if (galleryTitle) galleryTitle.textContent = 'Galería de Evidencias (Todas las Etapas)';
+    } else {
+        const list = data[stage] || [];
+        const label = stage === 'antes' ? 'Antes' : (stage === 'durante' ? 'Durante' : 'Después');
+        list.forEach((p, i) => photosToDisplay.push({ src: p, stage: label, stageKey: stage, idx: i }));
+        if (galleryTitle) galleryTitle.textContent = `Galería de Evidencias — Etapa ${label}`;
+    }
+
+    if (countLabel) countLabel.textContent = `${photosToDisplay.length} foto${photosToDisplay.length !== 1 ? 's' : ''} encontrada${photosToDisplay.length !== 1 ? 's' : ''}`;
+
+    if (photosToDisplay.length === 0) {
+        grid.innerHTML = `
+            <div class="col-span-full py-10 px-4 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <i class="fa-solid fa-camera-retro text-slate-300 text-3xl mb-2.5 block"></i>
+                <p class="text-xs font-bold text-slate-600">No hay fotografías registradas en esta etapa.</p>
+                <p class="text-[11px] text-slate-400 mt-1">Arrastra o selecciona fotos arriba para agregarlas a la carpeta del convenio en Google Drive.</p>
+            </div>
+        `;
+        return;
+    }
+
+    photosToDisplay.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'photo-card-item group';
+        const fastSrc = (typeof getFastDriveImageUrl === 'function') ? getFastDriveImageUrl(item.src, 320) : item.src;
+
+        card.innerHTML = `
+            <img src="${fastSrc}" alt="Foto Convenio ${cid}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="if(this.src!=='${item.src}'){this.src='${item.src}';}" />
+            <span class="photo-card-stage-pill">${item.stage}</span>
+            <button type="button" class="photo-card-delete-btn" title="Eliminar foto" onclick="window.deletePhotoFromConvenio('${item.stageKey}', ${item.idx})">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        `;
+
+        card.querySelector('img').addEventListener('click', () => {
+            currentGalleryImages = photosToDisplay.map(p => (typeof getFastDriveImageUrl === 'function' ? getFastDriveImageUrl(p.src, 1600) : p.src));
+            const imgIdx = photosToDisplay.indexOf(item);
+            openLightbox(imgIdx >= 0 ? imgIdx : 0);
+        });
+
+        grid.appendChild(card);
+    });
+}
+
+window.deletePhotoFromConvenio = function (stageKey, index) {
+    const cid = window.activePhotoMgrConvenioId;
+    if (!cid) return;
+
+    if (!confirm('¿Estás seguro de eliminar esta fotografía del registro del convenio?')) {
+        return;
+    }
+
+    try {
+        let stored = localStorage.getItem('diat_photos_' + cid);
+        let parsed = stored ? JSON.parse(stored) : { antes: [], durante: [], despues: [] };
+        if (Array.isArray(parsed)) {
+            parsed.splice(index, 1);
+            localStorage.setItem('diat_photos_' + cid, JSON.stringify(parsed));
+        } else if (parsed && parsed[stageKey]) {
+            parsed[stageKey].splice(index, 1);
+            localStorage.setItem('diat_photos_' + cid, JSON.stringify(parsed));
+        }
+
+        if (window.DIAT_DRIVE_PHOTOS_CACHE[cid] && window.DIAT_DRIVE_PHOTOS_CACHE[cid][stageKey]) {
+            window.DIAT_DRIVE_PHOTOS_CACHE[cid][stageKey].splice(index, 1);
+        }
+
+        renderPhotoManagerGallery();
+        if (typeof filterSupervisorConvenios === 'function') {
+            filterSupervisorConvenios();
+        }
+        alertToast('Foto Eliminada', 'La fotografía ha sido removida del registro.', 'info');
+    } catch (e) {
+        console.error("Error eliminando foto:", e);
+    }
+};
+
+function setupPhotoManagerEvents() {
+    const closeBtn = document.getElementById('btn-close-photo-mgr');
+    const closeFooter = document.getElementById('btn-close-photo-mgr-footer');
+    if (closeBtn) closeBtn.addEventListener('click', window.closeConvenioPhotoManager);
+    if (closeFooter) closeFooter.addEventListener('click', window.closeConvenioPhotoManager);
+
+    // Selector de etapas para visualización (Todas, Antes, Durante, Después)
+    document.querySelectorAll('.photo-mgr-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.photo-mgr-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            window.activePhotoMgrViewStage = tab.dataset.stage;
+            renderPhotoManagerGallery();
+        });
+    });
+
+    // Selector de etapa para carga (Antes, Durante, Después)
+    document.querySelectorAll('.photo-upload-stage-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.photo-upload-stage-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            window.activePhotoMgrUploadStage = btn.dataset.stage;
+        });
+    });
+
+    // Input de archivos y Drag & Drop
+    const fileInput = document.getElementById('photo-mgr-file-input');
+    const dropzone = document.getElementById('photo-mgr-dropzone');
+
+    if (dropzone && fileInput) {
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-emerald-500', 'bg-emerald-50/50');
+        });
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('border-emerald-500', 'bg-emerald-50/50');
+        });
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-emerald-500', 'bg-emerald-50/50');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handlePhotoManagerFiles(Array.from(e.dataTransfer.files));
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handlePhotoManagerFiles(Array.from(e.target.files));
+                e.target.value = '';
+            }
+        });
+    }
+}
+
+async function handlePhotoManagerFiles(files) {
+    const cid = window.activePhotoMgrConvenioId;
+    if (!cid || files.length === 0) return;
+
+    const stage = window.activePhotoMgrUploadStage || 'durante';
+    const progressContainer = document.getElementById('photo-mgr-progress-container');
+    const progressBar = document.getElementById('photo-mgr-progress-bar');
+    const progressPct = document.getElementById('photo-mgr-progress-pct');
+    const progressText = document.getElementById('photo-mgr-progress-text');
+
+    if (progressContainer) {
+        progressContainer.classList.remove('hidden');
+        if (progressBar) progressBar.style.width = '25%';
+        if (progressPct) progressPct.textContent = '25%';
+        if (progressText) progressText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-institutional-primary mr-1"></i>Comprimiendo y preparando fotografías en paralelo...';
+    }
+
+    const stageLabel = stage === 'antes' ? 'Antes' : (stage === 'durante' ? 'Durante' : 'Después');
+
+    let current = getConvenioPhotosData(cid);
+    let stageList = current[stage] || [];
+
+    try {
+        // 1. Compresión ultra rápida y simultánea de todas las imágenes seleccionadas
+        const compressedResults = await Promise.all(files.map(async (file) => {
+            try {
+                const comp = await compressImage(file, 1280, 1280, 0.78);
+                return { file, data: comp };
+            } catch (err) {
+                console.warn("Error comprimiendo archivo:", file.name, err);
+                return null;
+            }
+        }));
+
+        const validResults = compressedResults.filter(Boolean);
+        validResults.forEach(r => stageList.push(r.data));
+
+        if (progressBar) progressBar.style.width = '70%';
+        if (progressPct) progressPct.textContent = '70%';
+        if (progressText) progressText.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-institutional-primary mr-1"></i>Sincronizando con Google Drive en segundo plano...';
+
+        // 2. Actualización instantánea (Optimistic UI Update: 0 ms de espera para el usuario)
+        current[stage] = stageList;
+        const serialized = JSON.stringify({
+            antes: current.antes,
+            durante: current.durante,
+            despues: current.despues
+        });
+        localStorage.setItem('diat_photos_' + cid, serialized);
+        localStorage.setItem('diat_drive_cache_' + cid, serialized);
+
+        window.DIAT_DRIVE_PHOTOS_CACHE[cid] = {
+            antes: current.antes,
+            durante: current.durante,
+            despues: current.despues
+        };
+
+        // Renderizar inmediatamente la galería para que el usuario las vea ya mismo
+        renderPhotoManagerGallery();
+        if (typeof filterSupervisorConvenios === 'function') {
+            filterSupervisorConvenios();
+        }
+
+        // 3. Subida paralela asíncrona hacia Google Apps Script (Drive) sin bloquear la interfaz
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwXBFslIOCwVCyAae8-FG0VL5pqotLkjejwJhavm5xoGU4SlyVETwRkGCmDNVkcRPw4/exec";
+        validResults.forEach(item => {
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: "uploadPhoto",
+                    convenio: cid,
+                    stage: stage,
+                    fileName: item.file.name,
+                    fileData: item.data
+                })
+            }).catch(err => console.warn("Aviso subiendo a Drive:", err));
+
+            if (window.DIATDataService && typeof window.DIATDataService.uploadPhotoToStorage === 'function') {
+                window.DIATDataService.uploadPhotoToStorage(item.data, `${cid}_${stage}`).catch(() => { });
+            }
+        });
+
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressPct) progressPct.textContent = '100%';
+        if (progressText) progressText.innerHTML = '<i class="fa-solid fa-check text-emerald-600 mr-1"></i>¡Fotografías vinculadas exitosamente!';
+
+        setTimeout(() => {
+            if (progressContainer) progressContainer.classList.add('hidden');
+            alertToast('Registro Fotográfico Actualizado', `Se vincularon ${validResults.length} foto(s) en la etapa ${stageLabel} para el convenio ${cid}.`, 'success');
+        }, 400);
+
+    } catch (e) {
+        console.error("Error en procesamiento de fotos:", e);
+        if (progressContainer) progressContainer.classList.add('hidden');
+        alertToast('Error', 'Ocurrió un inconveniente al vincular las fotos.', 'error');
+    }
+}
+
 // Helpers globales para convenios y acciones directas
-window.openConvenioDetailById = function(convenioId) {
+window.openConvenioDetailById = function (convenioId) {
     const row = (rawData || []).find(r => String(r['CONVENIO']).trim() === String(convenioId).trim());
     if (row && typeof openModal === 'function') {
         openModal(row);
@@ -11739,7 +12579,13 @@ window.openConvenioDetailById = function(convenioId) {
     }
 };
 
-window.openNewVisitForConvenio = function(convenioId) {
+window.openNewVisitForConvenio = function (convenioId) {
+    const currentUser = getLoggedUser();
+    if (window.DIATDataService && !window.DIATDataService.hasPermission(currentUser, 'canCreateVisits')) {
+        alertToast('Acceso Denegado', 'No tienes permisos asignados para registrar visitas en terreno.', 'warning');
+        return;
+    }
+
     const regBtn = document.getElementById('btn-registrar-visita-portal');
     if (regBtn) {
         regBtn.click();
@@ -11753,7 +12599,7 @@ window.openNewVisitForConvenio = function(convenioId) {
     }
 };
 
-window.copyConvenioId = function(convenioId) {
+window.copyConvenioId = function (convenioId) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(String(convenioId).trim()).then(() => {
             alertToast('Convenio Copiado', `N° ${convenioId} copiado al portapapeles.`);
@@ -12208,7 +13054,7 @@ function renderSupervisorHistorialTable(supervisorRows) {
 }
 
 // Renderizado y control de la Bitácora de Auditoría en Tiempo Real
-window.renderAuditoriaTab = async function() {
+window.renderAuditoriaTab = async function () {
     const tbody = document.getElementById('audit-table-body');
     if (!tbody) return;
 
@@ -12224,7 +13070,7 @@ window.renderAuditoriaTab = async function() {
         const countBadge = document.getElementById('badge-count-auditoria');
         if (countBadge) countBadge.textContent = logs.length;
         window.filterAuditLogs();
-    } catch(err) {
+    } catch (err) {
         tbody.innerHTML = `<tr>
             <td colspan="5" class="p-6 text-center text-red-500 font-bold">
                 <i class="fa-solid fa-triangle-exclamation mr-2"></i>No se pudieron cargar los registros de auditoría: ${err.message}
@@ -12233,7 +13079,7 @@ window.renderAuditoriaTab = async function() {
     }
 };
 
-window.filterAuditLogs = function() {
+window.filterAuditLogs = function () {
     const tbody = document.getElementById('audit-table-body');
     if (!tbody) return;
 
@@ -12278,7 +13124,7 @@ window.filterAuditLogs = function() {
         const badge = typeBadges[l.tipo_evento] || `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700">${l.tipo_evento}</span>`;
         const initials = (l.usuario_corto || 'SU').slice(0, 2).toUpperCase();
         const convChip = l.convenio_id ? `<span class="font-mono px-2 py-0.5 bg-slate-100 rounded text-slate-800 font-bold">${l.convenio_id}</span>` : '<span class="text-slate-300">-</span>';
-        
+
         let detailsHtml = `<div class="font-semibold text-slate-800">${l.descripcion || ''}</div>`;
         if (l.detalles && typeof l.detalles === 'object' && Object.keys(l.detalles).length > 0) {
             const jsonStr = JSON.stringify(l.detalles);
@@ -12303,6 +13149,316 @@ window.filterAuditLogs = function() {
             <td class="p-3">${detailsHtml}</td>
         </tr>`;
     }).join('');
+};
+
+// =========================================================================
+// MÓDULO DE ADMINISTRACIÓN GENERAL: SUPERVISORES, PERMISOS Y ROLES DIAT
+// =========================================================================
+
+// Pobla dinámicamente el selector de supervisores en la barra del ADMIN
+function populateAdminSupervisorFilter() {
+    const sel = document.getElementById('portal-admin-supervisor-filter');
+    if (!sel) return;
+    const currentVal = sel.value || 'ALL';
+    sel.innerHTML = '<option value="ALL">🏛️ Todos los Supervisores (Consolidado Antioquia)</option>';
+
+    const sups = new Set();
+    if (typeof PORTAL_USERS === 'object') {
+        Object.keys(PORTAL_USERS).forEach(k => {
+            if (k !== 'ADMIN') {
+                const name = PORTAL_USERS[k].supervisorExcelName || PORTAL_USERS[k].name;
+                if (name) sups.add(name);
+            }
+        });
+    }
+    if (Array.isArray(rawData)) {
+        rawData.forEach(r => {
+            const s = (r['SUPERVISOR'] || '').trim();
+            if (s && s !== 'ADMINISTRADOR' && s !== 'ADMIN') sups.add(s);
+        });
+    }
+
+    const sorted = Array.from(sups).sort((a, b) => a.localeCompare(b));
+    sorted.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = `👤 ${s}`;
+        sel.appendChild(opt);
+    });
+
+    sel.value = currentVal;
+    sel.onchange = () => {
+        renderSupervisorPortal();
+        if (typeof window.filterSupervisorConvenios === 'function') {
+            window.filterSupervisorConvenios();
+        }
+    };
+}
+
+// Renderiza el panel administrativo de gestión de supervisores y permisos
+window.renderAdminSupervisoresPanel = function () {
+    const tbody = document.getElementById('admin-supervisores-table-body');
+    if (!tbody) return;
+
+    const userKeys = Object.keys(PORTAL_USERS).filter(k => k !== 'ADMIN');
+    let totalActive = 0;
+    let totalCanEdit = 0;
+    let totalCanVisits = 0;
+
+    const supDataList = userKeys.map(k => {
+        const u = PORTAL_USERS[k];
+        const perms = window.DIATDataService ? window.DIATDataService.getSupervisorPermissions(k) : {
+            active: true, canEditConvenios: true, canCreateVisits: true, canManagePhotos: true, canExportReports: true
+        };
+        const normName = normalizeSupervisorName(u.supervisorExcelName || u.name);
+        const assignedRows = (rawData || []).filter(r => normalizeSupervisorName(r['SUPERVISOR']) === normName);
+        const subregiones = [...new Set(assignedRows.map(r => r['SUBREGION']).filter(Boolean))];
+
+        if (perms.active) totalActive++;
+        if (perms.canEditConvenios) totalCanEdit++;
+        if (perms.canCreateVisits) totalCanVisits++;
+
+        return {
+            key: k,
+            user: u,
+            perms: perms,
+            assignedCount: assignedRows.length,
+            subregiones: subregiones
+        };
+    });
+
+    // Guardar en cache para filtrado instantáneo
+    window._cachedSupervisoresList = supDataList;
+
+    // Actualizar métricas KPI
+    const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setTxt('admin-kpi-total-supervisores', userKeys.length);
+    setTxt('admin-kpi-active-supervisores', totalActive);
+    setTxt('admin-kpi-edit-perm-count', totalCanEdit);
+    setTxt('admin-kpi-visit-perm-count', totalCanVisits);
+    const countBadge = document.getElementById('badge-count-supervisores');
+    if (countBadge) countBadge.textContent = userKeys.length;
+
+    window.filterAdminSupervisores();
+};
+
+// Filtra la tabla de supervisores por texto o estado de cuenta
+window.filterAdminSupervisores = function () {
+    const tbody = document.getElementById('admin-supervisores-table-body');
+    if (!tbody) return;
+
+    const query = (document.getElementById('admin-supervisor-search')?.value || '').toLowerCase().trim();
+    const statusFilter = document.getElementById('admin-supervisor-status-filter')?.value || 'TODOS';
+
+    const list = (window._cachedSupervisoresList || []).filter(item => {
+        if (statusFilter === 'ACTIVO' && !item.perms.active) return false;
+        if (statusFilter === 'INACTIVO' && item.perms.active) return false;
+        if (!query) return true;
+
+        const k = item.key.toLowerCase();
+        const n = item.user.name.toLowerCase();
+        const e = (item.user.email || '').toLowerCase();
+        const r = item.subregiones.join(' ').toLowerCase();
+        return k.includes(query) || n.includes(query) || e.includes(query) || r.includes(query);
+    });
+
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr>
+            <td colspan="5" class="p-8 text-center text-slate-400">
+                <i class="fa-solid fa-user-slash text-2xl mb-2 text-slate-300 block"></i>
+                No se encontraron supervisores que coincidan con los criterios de búsqueda.
+            </td>
+        </tr>`;
+        return;
+    }
+
+    tbody.innerHTML = list.map(item => {
+        const p = item.perms;
+        const activeBadge = p.active
+            ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>Activa</span>`
+            : `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300"><i class="fa-solid fa-ban text-rose-600"></i>Inactiva</span>`;
+
+        const chip = (label, ok, icon, colorClass) => {
+            return ok
+                ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-bold ${colorClass} border"><i class="fa-solid ${icon} text-[8.5px]"></i>${label}</span>`
+                : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-bold bg-slate-100 text-slate-400 border border-slate-200 line-through"><i class="fa-solid fa-xmark text-[8.5px]"></i>${label}</span>`;
+        };
+
+        const subregHtml = item.subregiones.length > 0
+            ? `<div class="text-[10px] text-slate-400 truncate max-w-[180px] mt-0.5" title="${item.subregiones.join(', ')}">${item.subregiones.join(', ')}</div>`
+            : `<div class="text-[10px] text-slate-400 italic mt-0.5">Sin convenios</div>`;
+
+        return `
+            <tr class="hover:bg-slate-50/80 transition">
+                <td class="p-3.5 whitespace-nowrap">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xs shadow-sm">
+                            ${item.user.initials || item.key.slice(0, 2)}
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                                ${item.user.name}
+                                <span class="font-mono text-[10px] text-slate-400 font-semibold">@${item.key}</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500">${item.user.email || 'Sin correo asignado'}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="p-3.5 text-center whitespace-nowrap">
+                    <span class="inline-block px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 font-black text-xs rounded-lg">
+                        ${item.assignedCount} convenios
+                    </span>
+                    ${subregHtml}
+                </td>
+                <td class="p-3.5 text-center whitespace-nowrap">
+                    ${activeBadge}
+                </td>
+                <td class="p-3.5">
+                    <div class="flex flex-wrap items-center gap-1.5 max-w-sm">
+                        ${chip('Editar', p.canEditConvenios, 'fa-pen-to-square', 'bg-emerald-50 text-emerald-800 border-emerald-200')}
+                        ${chip('Visitas', p.canCreateVisits, 'fa-helmet-safety', 'bg-blue-50 text-blue-800 border-blue-200')}
+                        ${chip('Fotos', p.canManagePhotos, 'fa-camera', 'bg-purple-50 text-purple-800 border-purple-200')}
+                        ${chip('Reportes', p.canExportReports, 'fa-file-export', 'bg-amber-50 text-amber-800 border-amber-200')}
+                    </div>
+                </td>
+                <td class="p-3.5 text-center whitespace-nowrap">
+                    <div class="flex items-center justify-center gap-1.5">
+                        <button type="button" onclick="openEditPermissionsModal('${item.key}')"
+                            class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm hover:shadow"
+                            title="Editar permisos operativos y estado de acceso">
+                            <i class="fa-solid fa-sliders text-amber-400"></i>
+                            <span>Permisos</span>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+};
+
+// Abre el modal de configuración de permisos para un supervisor
+window.openEditPermissionsModal = function (userKey) {
+    const u = PORTAL_USERS[userKey];
+    if (!u) return;
+
+    const modal = document.getElementById('modal-edit-supervisor-permissions');
+    if (!modal) return;
+
+    const perms = window.DIATDataService ? window.DIATDataService.getSupervisorPermissions(userKey) : {
+        active: true, canEditConvenios: true, canCreateVisits: true, canManagePhotos: true, canExportReports: true
+    };
+
+    const targetInp = document.getElementById('edit-perm-target-user');
+    if (targetInp) targetInp.value = userKey;
+
+    const av = document.getElementById('edit-perm-avatar');
+    if (av) av.textContent = u.initials || userKey.slice(0, 2);
+
+    const code = document.getElementById('edit-perm-user-code');
+    if (code) code.textContent = '@' + userKey;
+
+    const nameEl = document.getElementById('edit-perm-user-name');
+    if (nameEl) nameEl.textContent = u.name;
+
+    const emailEl = document.getElementById('edit-perm-user-email');
+    if (emailEl) emailEl.textContent = u.email || 'Sin correo institucional';
+
+    const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+    setChecked('perm-toggle-active', perms.active);
+    setChecked('perm-toggle-edit', perms.canEditConvenios);
+    setChecked('perm-toggle-visits', perms.canCreateVisits);
+    setChecked('perm-toggle-photos', perms.canManagePhotos);
+    setChecked('perm-toggle-reports', perms.canExportReports);
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+};
+
+// Cierra el modal de permisos
+window.closeEditPermissionsModal = function () {
+    const modal = document.getElementById('modal-edit-supervisor-permissions');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+};
+
+// Guarda los permisos modificados en el modal
+window.saveSupervisorPermissionsFromModal = async function (e) {
+    if (e) e.preventDefault();
+    const userKey = document.getElementById('edit-perm-target-user')?.value;
+    if (!userKey) return;
+
+    const getChecked = (id) => { const el = document.getElementById(id); return el ? el.checked : true; };
+    const newPerms = {
+        active: getChecked('perm-toggle-active'),
+        canEditConvenios: getChecked('perm-toggle-edit'),
+        canCreateVisits: getChecked('perm-toggle-visits'),
+        canManagePhotos: getChecked('perm-toggle-photos'),
+        canExportReports: getChecked('perm-toggle-reports')
+    };
+
+    const btn = document.getElementById('btn-save-supervisor-permissions');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Guardando...';
+    }
+
+    try {
+        if (window.DIATDataService) {
+            await window.DIATDataService.saveSupervisorPermissions(userKey, newPerms);
+        }
+        alertToast('Permisos Guardados', `Los permisos para ${PORTAL_USERS[userKey]?.name || userKey} fueron actualizados.`);
+        window.closeEditPermissionsModal();
+        if (typeof window.renderAdminSupervisoresPanel === 'function') {
+            window.renderAdminSupervisoresPanel();
+        }
+    } catch (err) {
+        console.error('[DIAT] Error al guardar permisos:', err);
+        alertToast('Error al Guardar', 'No se pudieron actualizar los permisos: ' + err.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk text-amber-400"></i><span>Guardar Permisos</span>';
+        }
+    }
+};
+
+// Acción administrativa: Restablecer contraseña a DIAT2026 de forma segura
+window.triggerAdminPasswordReset = async function () {
+    const userKey = document.getElementById('edit-perm-target-user')?.value;
+    if (!userKey) return;
+    const u = PORTAL_USERS[userKey];
+    const supName = u ? u.name : userKey;
+
+    if (!confirm(`¿Confirmas que deseas restablecer la contraseña de ${supName} (@${userKey}) a la clave provisional DIAT2026?\n\nEl supervisor tendrá que cambiar su clave de forma obligatoria en su siguiente inicio de sesión.`)) {
+        return;
+    }
+
+    const btn = document.getElementById('btn-admin-reset-pw');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Restableciendo...';
+    }
+
+    try {
+        if (typeof window.resetUserPassword === 'function') {
+            const res = await window.resetUserPassword(userKey);
+            if (res.success) {
+                alertToast('Contraseña Restablecida', `La clave de ${supName} fue restablecida a DIAT2026.`);
+            } else {
+                alertToast('Error al Restablecer', res.error || 'No se pudo restablecer la contraseña.', 'error');
+            }
+        }
+    } catch (err) {
+        console.error('[DIAT] Error en reseteo de clave por admin:', err);
+        alertToast('Error', err.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i><span>Restablecer Clave</span>';
+        }
+    }
 };
 
 // Carga las alertas específicas del supervisor en el portal
@@ -12654,17 +13810,6 @@ function initSearchableDropdown(selectId, placeholder = "Seleccionar...") {
 
 // 2. Controladores de Eventos de la Interfaz y Filtros Activos
 document.addEventListener('DOMContentLoaded', () => {
-    // Alternancia de Filtros Avanzados (Resumen)
-    const btnToggleFilters = document.getElementById('btn-toggle-filters');
-    const filterPanel = document.getElementById('filter-panel-collapsible');
-
-    if (btnToggleFilters && filterPanel) {
-        btnToggleFilters.addEventListener('click', (e) => {
-            e.preventDefault();
-            const isExpanded = filterPanel.classList.toggle('expanded');
-            btnToggleFilters.classList.toggle('active', isExpanded);
-        });
-    }
 
     // Alternancia de Filtros Avanzados (Mapa)
     const btnToggleMapFilters = document.getElementById('btn-toggle-map-filters');
@@ -17048,7 +18193,7 @@ function renderVisitasCalendar(filteredVisits) {
     vtCalLastVisits = filteredVisits || [];
 
     const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    
+
     // Si es la primera carga y hay visitas, centrar en el mes más relevante con visitas
     if (!window.vtCalUserHasNavigated && filteredVisits && filteredVisits.length > 0) {
         const sortedVisits = [...filteredVisits].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
@@ -17589,7 +18734,7 @@ window.closeAdminAuthModal = function () {
 function checkOrPromptAuthPassword(actionTitle = "acceder al Control de Visitas", onSuccess = null) {
     const logged = (typeof getLoggedUser === 'function') ? getLoggedUser() : null;
     const isAlreadyAdmin = logged && (
-        logged.username === 'ADMIN' || 
+        logged.username === 'ADMIN' ||
         (logged.role && logged.role.toLowerCase().includes('administrador'))
     );
 
@@ -17893,7 +19038,7 @@ function renderHubVisitsList() {
     container.innerHTML = filtered.map(v => {
         const isProg = (v.estado === 'Programada');
         const photoCount = (v.photos && v.photos.length) || parseInt(v.photoCount) || 0;
-        const photoBadge = photoCount > 0 
+        const photoBadge = photoCount > 0
             ? `<span class="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200"><i class="fa-solid fa-camera"></i> ${photoCount} foto(s)</span>`
             : '';
 

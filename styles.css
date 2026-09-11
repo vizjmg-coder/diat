@@ -2756,16 +2756,33 @@ select.filter-control option { font-family: var(--font-base); }
 /* 1. Panel de Filtros */
 .filter-panel,
 .filter-panel-collapsible {
-    max-height: none;
-    opacity: 1;
-    overflow: visible;
     padding-bottom: 4px;
 }
 
+.filter-panel-collapsible {
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+}
+
+.filter-panel-collapsible:not(.expanded) {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+}
+
 .filter-panel-collapsible.expanded {
-    max-height: none;
-    opacity: 1;
-    padding-bottom: 4px;
+    max-height: 2500px !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+    padding-bottom: 4px !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+    display: block !important;
 }
 
 /* 2. Componente de Dropdown con Buscador Personalizado */
@@ -3012,4 +3029,9 @@ select.filter-control option { font-family: var(--font-base); }
     border-radius: 0 !important;
     border: none !important;
     background: #FFFFFF;
+}
+
+/* 5. Utilidad de visibilidad global garantizada */
+.hidden {
+    display: none !important;
 }

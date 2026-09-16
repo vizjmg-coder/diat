@@ -3328,11 +3328,11 @@ async function generateResumenPDF() {
                 const muniStr = String(r['MUNICIPIO'] || 'N/A').trim().toUpperCase();
                 const ejecStr = String(r['CONVENIANTE EJECUTOR'] || '').trim().toUpperCase();
                 let muniCellContent = {};
-                if (ejecStr && ejecStr !== muniStr && ejecStr !== 'N/A') {
+                if (ejecStr && ejecStr !== muniStr && ejecStr !== 'N/A' && !isSameMuni(ejecStr, muniStr)) {
                     muniCellContent = {
                         stack: [
                             { text: String(r['CONVENIANTE EJECUTOR']), fontSize: 7.5, bold: true },
-                            { text: String(r['MUNICIPIO']), fontSize: 6.5, color: '#64748B', margin: [0, 1, 0, 0] }
+                            { text: String(r['MUNICIPIO'] || ''), fontSize: 6.5, color: '#64748B', margin: [0, 1, 0, 0] }
                         ]
                     };
                 } else {
@@ -4628,6 +4628,42 @@ function processExcelData(data) {
     if (typeof XLSX === 'undefined') { alert("SheetJS no cargo."); return; }
     const workbook = XLSX.read(data, { type: 'array' });
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    // Detección y auto-reparación de la columna MUNICIPIO si su encabezado vino vacío, con espacios o sin nombre
+    if (worksheet && worksheet['!ref']) {
+        try {
+            const range = XLSX.utils.decode_range(worksheet['!ref']);
+            let hasMunicipioHeader = false;
+            let colConvenio = -1;
+            let colEjecutor = -1;
+
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cellAddr = XLSX.utils.encode_cell({ r: range.s.r, c: C });
+                const cell = worksheet[cellAddr];
+                const val = (cell && cell.v !== undefined) ? String(cell.v).trim().toUpperCase() : '';
+                if (val === 'MUNICIPIO' || val === 'MUNICIPIOS' || val === 'NOMBRE MUNICIPIO' || val.startsWith('MUNICIPIO')) {
+                    hasMunicipioHeader = true;
+                    break;
+                }
+                if (val === 'CONVENIO') colConvenio = C;
+                if (val.includes('EJECUTOR')) colEjecutor = C;
+            }
+
+            if (!hasMunicipioHeader) {
+                // Típicamente está entre CONVENIO y CONVENIANTE EJECUTOR (Col G, índice 6)
+                let targetCol = 6;
+                if (colConvenio !== -1 && colEjecutor !== -1 && (colEjecutor - colConvenio) === 2) {
+                    targetCol = colConvenio + 1;
+                }
+                const targetAddr = XLSX.utils.encode_cell({ r: range.s.r, c: targetCol });
+                worksheet[targetAddr] = { t: 's', v: 'MUNICIPIO', w: 'MUNICIPIO' };
+                console.info('[DIAT] Encabezado MUNICIPIO auto-reparado en celda:', targetAddr);
+            }
+        } catch (e) {
+            console.warn('[DIAT] Aviso al auto-reparar encabezado MUNICIPIO:', e);
+        }
+    }
+
     let json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
     // Helper: find column tolerant to accents and encoding issues
@@ -4642,10 +4678,10 @@ function processExcelData(data) {
             var candidates = Array.prototype.slice.call(arguments);
             for (var i = 0; i < candidates.length; i++) {
                 var c = candidates[i];
-                if (row[c] !== undefined && row[c] !== '') return row[c];
+                if (row[c] !== undefined && String(row[c]).trim() !== '') return row[c];
                 var normC = norm(c);
                 for (var j = 0; j < keys.length; j++) {
-                    if (norm(keys[j]) === normC && row[keys[j]] !== '') return row[keys[j]];
+                    if (norm(keys[j]) === normC && String(row[keys[j]]).trim() !== '') return row[keys[j]];
                 }
             }
             return '';
@@ -4660,7 +4696,27 @@ function processExcelData(data) {
         if (pfin > 0 && pfin <= 1) pfin *= 100;
         var adicionDepto = parseNum(c('ADICIONES RECURSOS DEPARTAMENTO'));
         var adicionMun = parseNum(c('ADICIONES RECURSOS MUNICIPIO'));
+
+        var muniVal = c('MUNICIPIO', 'MUNICIPIOS', 'NOMBRE MUNICIPIO', 'MUNICIPIO / ASOCIACION', 'MUNICIPIO / ASOCIACIÓN');
+        if (!muniVal) {
+            if (row['MUNICIPIO'] && String(row['MUNICIPIO']).trim()) muniVal = String(row['MUNICIPIO']).trim();
+            else if (row[' '] && String(row[' ']).trim()) muniVal = String(row[' ']).trim();
+            else if (row[''] && String(row['']).trim()) muniVal = String(row['']).trim();
+            else {
+                for (var k in row) {
+                    if (k.startsWith('__EMPTY') && row[k] && String(row[k]).trim()) {
+                        muniVal = String(row[k]).trim();
+                        break;
+                    }
+                }
+            }
+        }
+        if (typeof cleanMojibake === 'function') {
+            muniVal = cleanMojibake(muniVal);
+        }
+
         return Object.assign({}, row, {
+            'MUNICIPIO': String(muniVal || row['MUNICIPIO'] || '').trim().toUpperCase(),
             'VIGENCIA': String(c('VIGENCIA') || '').trim() || 'Sin Ano',
             'VALOR TOTAL': parseNum(c('VALOR TOTAL', 'VALOR TOTAL CON ADICIONES')),
             'APORTE DEPARTAMENTO': parseNum(c('APORTE DEPARTAMENTO')),
@@ -5307,17 +5363,22 @@ function renderTable() {
         }
 
         let municipioColHTML = '';
-        const municipioStrRow = String(row['MUNICIPIO'] || 'N/A').trim().toUpperCase();
+        const rawMuniStr = String(row['MUNICIPIO'] || '').trim();
+        const municipioStrRow = rawMuniStr ? rawMuniStr.toUpperCase() : 'N/A';
         const ejecutorStrRow = String(row['CONVENIANTE EJECUTOR'] || '').trim().toUpperCase();
-        if (ejecutorStrRow && ejecutorStrRow !== municipioStrRow && ejecutorStrRow !== 'N/A') {
+        const isDifferentEjecutor = ejecutorStrRow && ejecutorStrRow !== 'N/A' && !isSameMuni(ejecutorStrRow, municipioStrRow) && ejecutorStrRow !== municipioStrRow;
+
+        if (isDifferentEjecutor) {
+            const muniSub = (rawMuniStr && rawMuniStr.toUpperCase() !== 'N/A') ? `
+                <span style="display:block;margin-top:3px;font-size:9px;font-weight:700;color:#94A3B8;text-transform:uppercase;" title="Municipio">
+                    <i class="fa-solid fa-location-dot" style="margin-right:3px;"></i>${rawMuniStr}
+                </span>` : '';
             municipioColHTML = `
                 <div style="font-size:11px;font-weight:700;color:#0F172A;line-height:1.2;" title="Conveniente Ejecutor">${row['CONVENIANTE EJECUTOR']}</div>
-                <span style="display:block;margin-top:3px;font-size:9px;font-weight:700;color:#94A3B8;text-transform:uppercase;" title="Municipio">
-                    <i class="fa-solid fa-location-dot" style="margin-right:3px;"></i>${row['MUNICIPIO'] || 'N/A'}
-                </span>
+                ${muniSub}
             `;
         } else {
-            municipioColHTML = `<span class="municipio-chip">${row['MUNICIPIO'] || 'N/A'}</span>`;
+            municipioColHTML = `<span class="municipio-chip">${rawMuniStr || row['CONVENIANTE EJECUTOR'] || 'N/A'}</span>`;
         }
 
         tr.innerHTML = `
@@ -6856,8 +6917,9 @@ function openModal(row) {
     document.getElementById('modal-title').textContent = `${row['CONVENIO']}`;
     const modalMuniStr = String(row['MUNICIPIO'] || 'N/A').trim().toUpperCase();
     const modalEjecStr = String(row['CONVENIANTE EJECUTOR'] || '').trim().toUpperCase();
-    let subTxt = `${row['MUNICIPIO']}`;
-    if (modalEjecStr && modalEjecStr !== modalMuniStr && modalEjecStr !== 'N/A') subTxt += ` - ${row['CONVENIANTE EJECUTOR']}`;
+    let subTxt = `${row['MUNICIPIO'] || 'N/A'}`;
+    const isEjecutorDiferente = (modalEjecStr && modalEjecStr !== modalMuniStr && modalEjecStr !== 'N/A' && !isSameMuni(modalEjecStr, modalMuniStr));
+    if (isEjecutorDiferente) subTxt += ` - ${row['CONVENIANTE EJECUTOR']}`;
     subTxt += ` - VIGENCIA ${row['VIGENCIA']}`;
     document.getElementById('modal-subtitle').textContent = subTxt;
 
@@ -6881,7 +6943,6 @@ function openModal(row) {
     document.getElementById('mod-valor-total').textContent = formatCurrency(row['VALOR TOTAL']);
     document.getElementById('mod-aporte-depto').textContent = formatCurrency(row['APORTE DEPARTAMENTO']);
     document.getElementById('mod-aporte-mun').textContent = formatCurrency(row['APORTE MUNICIPIO']);
-    const isEjecutorDiferente = (modalEjecStr && modalEjecStr !== modalMuniStr && modalEjecStr !== 'N/A');
     const lblAporteMun = document.getElementById('mod-lbl-aporte-mun');
     if (lblAporteMun) {
         if (isEjecutorDiferente) {

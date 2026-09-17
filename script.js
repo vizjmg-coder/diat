@@ -101,7 +101,7 @@ const getSelectValues = (id) => {
     const el = typeof id === 'string' ? document.getElementById(id) : id;
     if (!el) return [];
     if (el.multiple) {
-        return Array.from(el.selectedOptions)
+        return Array.from(el.selectedOptions || [])
             .map(opt => String(opt.value || '').trim())
             .filter(val => val !== '' && val !== 'todos' && val !== 'TODOS');
     } else {
@@ -160,6 +160,15 @@ const getRowLongitudEjecutadaPlan = (row) => {
         return parseNum(row['LONGITUD EJECUTADA CUATRENIO']);
     }
     return parseNum(row['LONGITUD EJECUTADA']);
+};
+
+const getRowLongitudEjecutadaCuatrenio = (row) => {
+    if (!row) return 0;
+    if (isCuatrenioAnterior(row)) {
+        return parseNum(row['LONGITUD EJECUTADA CUATRENIO']) || 0;
+    }
+    const lc = parseNum(row['LONGITUD EJECUTADA CUATRENIO']) || 0;
+    return lc > 0 ? lc : (parseNum(row['LONGITUD EJECUTADA']) || 0);
 };
 
 const getRowAreaEjecutadaPlan = (row) => {
@@ -5229,6 +5238,7 @@ function updateDashboard() {
 function updateKPIs() {
     let activos = 0, porLiquidar = 0, sumInv = 0, sumDes = 0, sumAut = 0;
     let totLonCon = 0, totLonEje = 0, totAreCon = 0, totAreEje = 0;
+    let totLonCuat = 0, totLonConCuat = 0;
 
     filteredData.forEach(r => {
         const est = String(r['ESTADO CONVENIO']).toLowerCase();
@@ -5242,6 +5252,9 @@ function updateKPIs() {
         totLonEje += getRowLongitudEjecutada(r);
         totAreCon += getRowAreaContratada(r);
         totAreEje += getRowAreaEjecutada(r);
+
+        totLonCuat += getRowLongitudEjecutadaCuatrenio(r);
+        totLonConCuat += getRowLongitudContratadaPlan(r);
     });
 
     document.getElementById('kpi-total').textContent = filteredData.length;
@@ -5313,6 +5326,25 @@ function updateKPIs() {
 
     const elAreCon = document.getElementById('tot-are-con-text');
     if (elAreCon) elAreCon.textContent = formatNumber(totAreCon);
+
+    // Update Longitud Cuatrenio (2024-2027)
+    const elLonCuat = document.getElementById('tot-lon-cuat-text');
+    if (elLonCuat) elLonCuat.textContent = (totLonCuat / 1000).toFixed(2) + ' km';
+
+    const elLonCuatCon = document.getElementById('tot-lon-cuat-con-text');
+    const targetCuat = totLonConCuat > 0 ? totLonConCuat : (totLonCuat > 0 ? totLonCon : 0);
+    if (elLonCuatCon) {
+        elLonCuatCon.textContent = (targetCuat / 1000).toFixed(2) + ' km';
+    }
+
+    const pctCuat = targetCuat > 0 ? Math.min(100, (totLonCuat / targetCuat) * 100) : 0;
+    const barLonCuat = document.getElementById('tot-lon-cuat-bar');
+    if (barLonCuat) {
+        barLonCuat.style.width = pctCuat.toFixed(1) + '%';
+        if (barLonCuat.parentElement) {
+            barLonCuat.parentElement.title = `${pctCuat.toFixed(1)}% ejecutado en cuatrienio 2024–2027`;
+        }
+    }
 
     if (typeof refreshSyntheticMapData === 'function') {
         refreshSyntheticMapData();
@@ -6499,43 +6531,54 @@ function updateCharts() {
         const pct = tCon > 0 ? (tEje / tCon) * 100 : 0;
         const rest = Math.max(0, tCon - tEje);
 
-        // Update highlight styling of the interactive boxes
+        // Update highlight styling of the interactive boxes and unified card
         const btnLon = document.getElementById('btn-metric-longitud');
         const btnAre = document.getElementById('btn-metric-area');
+        const viewLon = document.getElementById('view-metric-longitud');
+        const viewAre = document.getElementById('view-metric-area');
+        const lblUnified = document.getElementById('label-metric-unified');
+        const barUnified = document.getElementById('unified-bar-fill');
+        const txtLon = document.getElementById('tot-lon-eje-text');
+        const txtAre = document.getElementById('tot-are-eje-text');
+
         if (window.activeFisicoMetric === 'longitud') {
             if (btnLon) {
-                btnLon.style.background = '#F0FDFA';
-                btnLon.style.borderColor = 'rgba(1, 141, 56, 0.2)';
-                const txt = btnLon.querySelector('#tot-lon-eje-text');
-                if (txt) txt.style.color = '#0B5640';
+                btnLon.className = 'px-1.5 py-0.5 rounded transition-all cursor-pointer font-bold bg-white text-emerald-800 shadow-xs';
             }
             if (btnAre) {
-                btnAre.style.background = '#F8FAFC';
-                btnAre.style.borderColor = '#E2E8F0';
-                const txt = btnAre.querySelector('#tot-are-eje-text');
-                if (txt) {
-                    txt.style.color = '#0F172A';
-                } else {
-                    btnAre.style.color = '#0F172A';
-                }
+                btnAre.className = 'px-1.5 py-0.5 rounded transition-all cursor-pointer font-semibold text-slate-500 hover:text-slate-800';
             }
+            if (viewLon) {
+                viewLon.classList.remove('hidden');
+                viewLon.classList.add('flex');
+            }
+            if (viewAre) {
+                viewAre.classList.add('hidden');
+                viewAre.classList.remove('flex');
+            }
+            if (lblUnified) lblUnified.textContent = 'Long. Ejecutada';
+            if (txtLon) txtLon.style.color = '#065F46';
         } else {
             if (btnLon) {
-                btnLon.style.background = '#F8FAFC';
-                btnLon.style.borderColor = '#E2E8F0';
-                const txt = btnLon.querySelector('#tot-lon-eje-text');
-                if (txt) {
-                    txt.style.color = '#0F172A';
-                } else {
-                    btnLon.style.color = '#0F172A';
-                }
+                btnLon.className = 'px-1.5 py-0.5 rounded transition-all cursor-pointer font-semibold text-slate-500 hover:text-slate-800';
             }
             if (btnAre) {
-                btnAre.style.background = '#F0FDFA';
-                btnAre.style.borderColor = 'rgba(1, 141, 56, 0.2)';
-                const txt = btnAre.querySelector('#tot-are-eje-text');
-                if (txt) txt.style.color = '#0B5640';
+                btnAre.className = 'px-1.5 py-0.5 rounded transition-all cursor-pointer font-bold bg-white text-emerald-800 shadow-xs';
             }
+            if (viewLon) {
+                viewLon.classList.add('hidden');
+                viewLon.classList.remove('flex');
+            }
+            if (viewAre) {
+                viewAre.classList.remove('hidden');
+                viewAre.classList.add('flex');
+            }
+            if (lblUnified) lblUnified.textContent = 'Área Ejecutada';
+            if (txtAre) txtAre.style.color = '#065F46';
+        }
+
+        if (barUnified) {
+            barUnified.style.width = `${Math.min(100, Math.max(0, pct)).toFixed(1)}%`;
         }
 
         // Actualizar elementos de la Barra de Progreso Prominente
@@ -9467,6 +9510,14 @@ function renderPlanTab() {
 }
 
 /**
+ * Abre la ventana modal con el resumen del indicador y la tabla sintética de convenios asignados
+ */
+// Variable de estado global para los convenios actualmente filtrados en el modal de indicadores
+window.currentModalFilteredRows = [];
+window.currentModalIndCfg = { unit: 'km', tipo: 'km', metas: { todos: 500 } };
+window.currentModalActiveFilters = { vigencias: [], clasificaciones: [], indicador: 'VÍAS TERCIARIAS MEJORADAS. (RVT)' };
+
+/**
  * Abre el pop-up de detalle de indicador a partir de la selección del dropdown anual
  */
 window.openIndicadorDetailFromSelect = function () {
@@ -9476,26 +9527,20 @@ window.openIndicadorDetailFromSelect = function () {
     if (val && val !== 'todos' && val !== 'todos-km' && val !== 'todos-m2') {
         openIndicadorDetailModal(val);
     } else {
-        openIndicadorDetailModal('VÍA URBANA MEJORADA. (RVU)');
+        openIndicadorDetailModal('VÍAS TERCIARIAS MEJORADAS. (RVT)');
     }
 };
 
 /**
- * Abre la ventana modal con el resumen del indicador y la tabla sintética de convenios asignados
+ * Abre la ventana modal con el resumen del indicador, filtros multi-selección (Vigencia y Clasificación) y tabla sintética de convenios asignados
  */
 window.openIndicadorDetailModal = function (indKey) {
-    if (!indKey) return;
+    if (!indKey) indKey = 'VÍAS TERCIARIAS MEJORADAS. (RVT)';
     const normalizedKey = (typeof normalizarIndicador === 'function' ? normalizarIndicador(indKey) : '') || indKey;
-    const cfg = (typeof indicadoresEstrategicos !== 'undefined' && (indicadoresEstrategicos[normalizedKey] || indicadoresEstrategicos[indKey]))
+    const initialCfg = (typeof indicadoresEstrategicos !== 'undefined' && (indicadoresEstrategicos[normalizedKey] || indicadoresEstrategicos[indKey]))
         || { unit: 'und', tipo: 'und', metas: { todos: 0 } };
 
-    // 1. Obtener convenios asociados a este indicador en rawData
-    const relatedRows = (rawData || []).filter(r => {
-        const rInd = typeof normalizarIndicador === 'function' ? normalizarIndicador(r['INDICADOR']) : (r['INDICADOR'] || '');
-        return rInd === normalizedKey || r['INDICADOR'] === normalizedKey || rInd === indKey;
-    });
-
-    // 2. Referencias a elementos del DOM
+    // 1. Referencias a elementos del DOM
     const modalEl = document.getElementById('modal-indicador-detalle');
     const titleEl = document.getElementById('modal-ind-title');
     const badgeTipo = document.getElementById('modal-ind-badge-tipo');
@@ -9515,124 +9560,52 @@ window.openIndicadorDetailModal = function (indKey) {
     const tableBody = document.getElementById('modal-ind-table-body');
     const tableFooter = document.getElementById('modal-ind-table-footer');
 
+    const selVigenciaEl = document.getElementById('modal-filter-vigencia');
+    const selClasificacionEl = document.getElementById('modal-filter-clasificacion');
+    const badgeActiveFilters = document.getElementById('modal-ind-active-filters-badge');
+    const btnResetFilters = document.getElementById('btn-modal-ind-reset-filters');
+    const btnPdf = document.getElementById('btn-modal-ind-export-pdf');
+
     if (!modalEl) return;
 
-    // 3. Configurar Título y Badges
-    if (titleEl) titleEl.textContent = normalizedKey;
-    if (badgeTipo) {
-        const tipoLabel = cfg.tipo === 'km' ? 'Kilómetros (km)' : (cfg.tipo === 'm2' ? 'Metros Cuadrados (m²)' : 'Unidades (und)');
-        badgeTipo.textContent = `Métrica: ${tipoLabel}`;
+    // 2. Poblar opciones únicas en los dos filtros del modal (Vigencia y Clasificación)
+    const uniqueVigencias = [...new Set((rawData || []).map(r => String(r['VIGENCIA'] || '').trim()).filter(Boolean))]
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+
+    const uniqueClasificaciones = [...new Set((rawData || []).map(r => String(r['CLASIFICACION'] || r['CLASIFICACIÓN'] || r['CLASIFICACIN'] || '').trim()).filter(Boolean))]
+        .sort();
+
+    // Poblar Vigencias
+    if (selVigenciaEl) {
+        selVigenciaEl.innerHTML = '<option value="">Todas las Vigencias</option>' +
+            uniqueVigencias.map(v => `<option value="${v}">${v}</option>`).join('');
     }
 
-    const metaCuatrienio = cfg.metas ? (cfg.metas['todos'] || 0) : 0;
-    if (badgeMeta) {
-        const metaFmt = cfg.tipo === 'km' ? `${metaCuatrienio} km` : (cfg.tipo === 'm2' ? formatNumber(metaCuatrienio) + ' m²' : `${metaCuatrienio} und`);
-        badgeMeta.textContent = `Meta Oficial: ${metaFmt}`;
+    // Poblar Clasificaciones
+    if (selClasificacionEl) {
+        selClasificacionEl.innerHTML = '<option value="">Todas las Clasificaciones</option>' +
+            uniqueClasificaciones.map(c => `<option value="${c}">${c}</option>`).join('');
     }
 
-    // 4. Agregación de Métricas Totales y Cuatrienio
-    let totalLongitudEjecutadaM = 0;
-    let totalLongitudCuatrenioM = 0;
-    let totalAreaEjecutadaM2 = 0;
-    let totalAreaCuatrenioM2 = 0;
-    let totalUndEjecutada = 0;
-    let totalUndCuatrenio = 0;
-    let totalInversion = 0;
-    const munisSet = new Set();
-
-    relatedRows.forEach(row => {
-        if (row['MUNICIPIO']) munisSet.add(String(row['MUNICIPIO']).trim());
-        const inv = (parseNum(row['APORTE DEPARTAMENTO']) || 0) + (parseNum(row['ADICION DEPARTAMENTO']) || 0);
-        totalInversion += inv;
-
-        const le = parseNum(row['LONGITUD EJECUTADA']) || 0;
-        let lc = parseNum(row['LONGITUD EJECUTADA CUATRENIO']) || 0;
-        // Si no es cuatrenio anterior (vigencia >= 2024), todo lo ejecutado cuenta al cuatrienio actual
-        if (!isCuatrenioAnterior(row) && lc === 0 && le > 0) {
-            lc = le;
-        }
-
-        totalLongitudEjecutadaM += le;
-        totalLongitudCuatrenioM += lc;
-
-        const ae = parseNum(row['AREA EJECUTADA (M2)']) || 0;
-        let ac = parseNum(row['AREA EJECUTADA CUATRENIO (M2)']) || 0;
-        if (!isCuatrenioAnterior(row) && ac === 0 && ae > 0) {
-            ac = ae;
-        }
-        totalAreaEjecutadaM2 += ae;
-        totalAreaCuatrenioM2 += ac;
-
-        const fis = parseNum(row['FISICO_NORM']) || 0;
-        if (fis >= 100) {
-            totalUndEjecutada += 1;
-            totalUndCuatrenio += 1;
-        } else if (fis > 0) {
-            totalUndEjecutada += fis / 100;
-            totalUndCuatrenio += fis / 100;
-        }
-    });
-
-    // Formatear métricas principales según tipo
-    let valAlcanceTotalNum = 0;
-    let valAlcanceTotalStr = '';
-    let valAlcanceMStr = '';
-    let valCuatrenioNum = 0;
-    let valCuatrenioStr = '';
-    let valCuatrenioSubStr = '';
-
-    if (cfg.tipo === 'km') {
-        valAlcanceTotalNum = totalLongitudEjecutadaM / 1000;
-        valAlcanceTotalStr = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valAlcanceTotalNum) + ' km';
-        valAlcanceMStr = `${formatNumber(Math.round(totalLongitudEjecutadaM))} m ejecutados en total`;
-
-        valCuatrenioNum = totalLongitudCuatrenioM / 1000;
-        valCuatrenioStr = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valCuatrenioNum) + ' km';
-        valCuatrenioSubStr = `Longitud Ejecutada Cuatrienio (${formatNumber(Math.round(totalLongitudCuatrenioM))} m)`;
-    } else if (cfg.tipo === 'm2') {
-        valAlcanceTotalNum = totalAreaEjecutadaM2;
-        valAlcanceTotalStr = formatNumber(Math.round(valAlcanceTotalNum)) + ' m²';
-        valAlcanceMStr = 'Área total ejecutada';
-
-        valCuatrenioNum = totalAreaCuatrenioM2;
-        valCuatrenioStr = formatNumber(Math.round(valCuatrenioNum)) + ' m²';
-        valCuatrenioSubStr = 'Área Ejecutada Cuatrienio';
-    } else {
-        valAlcanceTotalNum = totalUndEjecutada;
-        valAlcanceTotalStr = Number.isInteger(valAlcanceTotalNum) ? `${valAlcanceTotalNum} und` : `${valAlcanceTotalNum.toFixed(1)} und`;
-        valAlcanceMStr = 'Unidades terminadas / en operación';
-
-        valCuatrenioNum = totalUndCuatrenio;
-        valCuatrenioStr = Number.isInteger(valCuatrenioNum) ? `${valCuatrenioNum} und` : `${valCuatrenioNum.toFixed(1)} und`;
-        valCuatrenioSubStr = 'Aporte en unidades al Cuatrienio';
+    // Inicializar dropdowns customizables si no lo están
+    if (typeof initSearchableDropdown === 'function') {
+        initSearchableDropdown('modal-filter-vigencia', 'Todas las Vigencias...');
+        initSearchableDropdown('modal-filter-clasificacion', 'Todas las Clasificaciones...');
     }
 
-    const pctCumplido = metaCuatrienio > 0 ? (valCuatrenioNum / metaCuatrienio) * 100 : 0;
-    if (badgeCumplimiento) {
-        badgeCumplimiento.textContent = `${pctCumplido.toFixed(1)}% Cumplido`;
-    }
+    // Sincronizar hacia los dropdowns visuales
+    if (selVigenciaEl) selVigenciaEl.dispatchEvent(new Event('change', { bubbles: true }));
+    if (selClasificacionEl) selClasificacionEl.dispatchEvent(new Event('change', { bubbles: true }));
 
-    if (kpiConvenios) kpiConvenios.textContent = `${relatedRows.length} convenios`;
-    if (kpiMunis) kpiMunis.textContent = `En ${munisSet.size} municipio${munisSet.size === 1 ? '' : 's'}`;
-    if (kpiAlcanceTotal) kpiAlcanceTotal.textContent = valAlcanceTotalStr;
-    if (kpiAlcanceM) kpiAlcanceM.textContent = valAlcanceMStr;
-    if (kpiCuatrenio) kpiCuatrenio.textContent = valCuatrenioStr;
-    if (kpiCuatrenioSub) kpiCuatrenioSub.textContent = valCuatrenioSubStr;
-    if (kpiInversion) kpiInversion.textContent = formatCurrency(totalInversion);
-
-    const restante = Math.max(metaCuatrienio - valCuatrenioNum, 0);
-    if (kpiMetaRestante) {
-        const resFmt = cfg.tipo === 'km' ? `${restante.toFixed(2)} km` : (cfg.tipo === 'm2' ? formatNumber(Math.round(restante)) + ' m²' : `${restante} und`);
-        kpiMetaRestante.textContent = `Restante: ${resFmt}`;
-    }
-
-    // 5. Renderizado de la Tabla Sintética con Buscador en Vivo
-    function renderTable(filterQuery = '') {
+    // 3. Función de Renderizado de la Tabla Sintética
+    function renderModalTable(filterQuery = '') {
         if (!tableBody) return;
         tableBody.innerHTML = '';
         const q = String(filterQuery || '').toLowerCase().trim();
 
-        const filtered = relatedRows.filter(r => {
+        const currentRows = window.currentModalFilteredRows || [];
+
+        const filtered = currentRows.filter(r => {
             if (!q) return true;
             const conv = String(r['CONVENIO'] || '').toLowerCase();
             const mun = String(r['MUNICIPIO'] || '').toLowerCase();
@@ -9645,14 +9618,14 @@ window.openIndicadorDetailModal = function (indKey) {
         });
 
         if (countEl) {
-            countEl.textContent = `Mostrando ${filtered.length} de ${relatedRows.length} convenios`;
+            countEl.textContent = `Mostrando ${filtered.length} de ${currentRows.length} convenios`;
         }
 
         if (filtered.length === 0) {
             tableBody.innerHTML = `
                 <tr>
                     <td colspan="7" class="py-8 text-center text-slate-400 italic">
-                        No se encontraron convenios que coincidan con la búsqueda.
+                        No se encontraron convenios que coincidan con la búsqueda o los filtros aplicados.
                     </td>
                 </tr>
             `;
@@ -9660,6 +9633,7 @@ window.openIndicadorDetailModal = function (indKey) {
             return;
         }
 
+        const cfg = window.currentModalIndCfg || initialCfg;
         let sumFiltroTotal = 0;
         let sumFiltroCuatrenio = 0;
         let sumFiltroInversion = 0;
@@ -9753,7 +9727,6 @@ window.openIndicadorDetailModal = function (indKey) {
                 </td>
                 <td class="py-2.5 px-3">
                     <div class="flex flex-col gap-1 min-w-[110px] max-w-[140px] mx-auto">
-                        <!-- Físico -->
                         <div class="flex items-center justify-between gap-1 text-[10px]">
                             <span class="text-[9px] font-bold text-slate-500 uppercase">Fís:</span>
                             <span class="font-bold text-slate-800 font-mono">${fisText}</span>
@@ -9761,7 +9734,6 @@ window.openIndicadorDetailModal = function (indKey) {
                                 <div class="h-full bg-emerald-600 rounded-full" style="width: ${Math.min(Math.max(fisVal, 0), 100)}%"></div>
                             </div>
                         </div>
-                        <!-- Financiero -->
                         <div class="flex items-center justify-between gap-1 text-[10px]">
                             <span class="text-[9px] font-bold text-slate-500 uppercase">Fin:</span>
                             <span class="font-bold text-blue-700 font-mono">${finText}</span>
@@ -9787,7 +9759,7 @@ window.openIndicadorDetailModal = function (indKey) {
             tableBody.appendChild(tr);
         });
 
-        // 6. Fila de Totales en el Footer
+        // Fila de Totales en el Footer
         if (tableFooter) {
             const sumTotFmt = cfg.tipo === 'km' ? `${sumFiltroTotal.toFixed(2)} km` : (cfg.tipo === 'm2' ? formatNumber(Math.round(sumFiltroTotal)) + ' m²' : `${sumFiltroTotal.toFixed(1)} und`);
             const sumCuatFmt = cfg.tipo === 'km' ? `${sumFiltroCuatrenio.toFixed(2)} km` : (cfg.tipo === 'm2' ? formatNumber(Math.round(sumFiltroCuatrenio)) + ' m²' : `${sumFiltroCuatrenio.toFixed(1)} und`);
@@ -9808,165 +9780,943 @@ window.openIndicadorDetailModal = function (indKey) {
         }
     }
 
-    // Configurar Input de Búsqueda
+    // 4. Función Reactiva de Filtrado Multi-Criterio (Vigencia y Clasificación)
+    function applyModalFilters() {
+        const selVig = typeof getSelectValues === 'function' ? getSelectValues('modal-filter-vigencia') : [];
+        const selClas = typeof getSelectValues === 'function' ? getSelectValues('modal-filter-clasificacion') : [];
+
+        window.currentModalActiveFilters = { vigencias: selVig, clasificaciones: selClas, indicador: normalizedKey };
+
+        // Contador de filtros activos (Vigencia y Clasificación)
+        const activeCount = (selVig.length > 0 ? 1 : 0) + (selClas.length > 0 ? 1 : 0);
+        if (badgeActiveFilters) {
+            if (activeCount > 0) {
+                badgeActiveFilters.textContent = `${activeCount} activo${activeCount > 1 ? 's' : ''}`;
+                badgeActiveFilters.classList.remove('hidden');
+            } else {
+                badgeActiveFilters.classList.add('hidden');
+            }
+        }
+
+        const currentCfg = initialCfg;
+        window.currentModalIndCfg = currentCfg;
+
+        // Filtrar rawData: restringido al indicador actual del popup (indKey / normalizedKey)
+        const filtered = (rawData || []).filter(r => {
+            // Filtro Indicador fijo al indicador abierto en el popup
+            const rInd = String(r['INDICADOR'] || '').trim();
+            const rNorm = typeof normalizarIndicador === 'function' ? normalizarIndicador(rInd) : rInd;
+            const matchInd = (rInd === indKey || rInd === normalizedKey || (rNorm && (rNorm === normalizedKey || rNorm === indKey)));
+            if (!matchInd) return false;
+
+            // Filtro Vigencia
+            if (selVig.length > 0) {
+                const rVig = String(r['VIGENCIA'] || '').trim();
+                if (!selVig.includes(rVig)) return false;
+            }
+
+            // Filtro Clasificación
+            if (selClas.length > 0) {
+                const rClas = String(r['CLASIFICACION'] || r['CLASIFICACIÓN'] || r['CLASIFICACIN'] || '').trim();
+                if (!selClas.includes(rClas)) return false;
+            }
+
+            return true;
+        });
+
+        window.currentModalFilteredRows = filtered;
+
+        // Título del Modal y Badges Superiores
+        if (titleEl) {
+            titleEl.textContent = normalizedKey;
+        }
+
+        if (badgeTipo) {
+            const tipoLabel = currentCfg.tipo === 'km' ? 'Kilómetros (km)' : (currentCfg.tipo === 'm2' ? 'Metros Cuadrados (m²)' : 'Unidades (und)');
+            badgeTipo.textContent = `Métrica: ${tipoLabel}`;
+        }
+
+        // Meta oficial del indicador
+        const metaCuatrienio = currentCfg.metas ? (currentCfg.metas['todos'] || 0) : 0;
+        if (badgeMeta) {
+            const metaFmt = currentCfg.tipo === 'km' ? `${metaCuatrienio} km` : (currentCfg.tipo === 'm2' ? formatNumber(metaCuatrienio) + ' m²' : `${metaCuatrienio} und`);
+            badgeMeta.textContent = `Meta Oficial: ${metaFmt}`;
+        }
+
+        // Métricas Totales y Cuatrienio (Alcance Contratado y Aporte Cuatrienio)
+        let totalLongitudContratadaM = 0;
+        let totalLongitudCuatrenioM = 0;
+        let totalAreaContratadaM2 = 0;
+        let totalAreaCuatrenioM2 = 0;
+        let totalUndContratada = 0;
+        let totalUndCuatrenio = 0;
+        let totalInversion = 0;
+        const munisSet = new Set();
+
+        filtered.forEach(row => {
+            if (row['MUNICIPIO']) munisSet.add(String(row['MUNICIPIO']).trim());
+            const inv = (parseNum(row['APORTE DEPARTAMENTO']) || 0) + (parseNum(row['ADICION DEPARTAMENTO']) || 0);
+            totalInversion += inv;
+
+            const isHeredado = isCuatrenioAnterior(row);
+
+            // Contratado en el cuatrienio (excluye convenios heredados de administraciones anteriores)
+            if (!isHeredado) {
+                const alcM = parseNum(row['ALCANCE (m)']) || parseNum(row['ALCANCE (M)']) || parseNum(row['LONGITUD TOTAL']) || parseNum(row['LONGITUD CONTRATADA']) || 0;
+                totalLongitudContratadaM += alcM;
+
+                const alcM2 = parseNum(row['ALCANCE (M2)']) || parseNum(row['ALCANCE (m2)']) || parseNum(row['AREA CONTRATADA (M2)']) || 0;
+                totalAreaContratadaM2 += alcM2;
+
+                totalUndContratada += 1;
+            }
+
+            // Aporte Cuatrienio
+            const le = parseNum(row['LONGITUD EJECUTADA']) || 0;
+            let lc = parseNum(row['LONGITUD EJECUTADA CUATRENIO']) || 0;
+            if (!isHeredado && lc === 0 && le > 0) {
+                lc = le;
+            }
+            totalLongitudCuatrenioM += lc;
+
+            const ae = parseNum(row['AREA EJECUTADA (M2)']) || 0;
+            let ac = parseNum(row['AREA EJECUTADA CUATRENIO (M2)']) || 0;
+            if (!isHeredado && ac === 0 && ae > 0) {
+                ac = ae;
+            }
+            totalAreaCuatrenioM2 += ac;
+
+            const fis = parseNum(row['FISICO_NORM']) || 0;
+            if (fis >= 100) {
+                totalUndCuatrenio += 1;
+            } else if (fis > 0) {
+                totalUndCuatrenio += fis / 100;
+            }
+        });
+
+        // Formatear métricas según tipo
+        let valContratadoNum = 0;
+        let valContratadoStr = '';
+        let valContratadoSubStr = '';
+        let valCuatrenioNum = 0;
+        let valCuatrenioStr = '';
+        let valCuatrenioSubStr = '';
+
+        if (currentCfg.tipo === 'km') {
+            valContratadoNum = totalLongitudContratadaM / 1000;
+            valContratadoStr = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valContratadoNum) + ' km';
+            valContratadoSubStr = `${formatNumber(Math.round(totalLongitudContratadaM))} m contratados en el cuatrienio`;
+
+            valCuatrenioNum = totalLongitudCuatrenioM / 1000;
+            valCuatrenioStr = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valCuatrenioNum) + ' km';
+            valCuatrenioSubStr = `Longitud Ejecutada Cuatrienio (${formatNumber(Math.round(totalLongitudCuatrenioM))} m)`;
+        } else if (currentCfg.tipo === 'm2') {
+            valContratadoNum = totalAreaContratadaM2;
+            valContratadoStr = formatNumber(Math.round(valContratadoNum)) + ' m²';
+            valContratadoSubStr = `${formatNumber(Math.round(totalAreaContratadaM2))} m² contratados en el cuatrienio`;
+
+            valCuatrenioNum = totalAreaCuatrenioM2;
+            valCuatrenioStr = formatNumber(Math.round(valCuatrenioNum)) + ' m²';
+            valCuatrenioSubStr = 'Área Ejecutada Cuatrienio';
+        } else {
+            valContratadoNum = totalUndContratada;
+            valContratadoStr = Number.isInteger(valContratadoNum) ? `${valContratadoNum} und` : `${valContratadoNum.toFixed(1)} und`;
+            valContratadoSubStr = 'Unidades contratadas cuatrienio';
+
+            valCuatrenioNum = totalUndCuatrenio;
+            valCuatrenioStr = Number.isInteger(valCuatrenioNum) ? `${valCuatrenioNum} und` : `${valCuatrenioNum.toFixed(1)} und`;
+            valCuatrenioSubStr = 'Aporte en unidades al Cuatrienio';
+        }
+
+        const pctCumplido = metaCuatrienio > 0 ? (valCuatrenioNum / metaCuatrienio) * 100 : 0;
+        if (badgeCumplimiento) {
+            badgeCumplimiento.textContent = `${pctCumplido.toFixed(1)}% Cumplido`;
+        }
+
+        if (kpiConvenios) kpiConvenios.textContent = `${filtered.length} convenios`;
+        if (kpiMunis) kpiMunis.textContent = `En ${munisSet.size} municipio${munisSet.size === 1 ? '' : 's'}`;
+        if (kpiAlcanceTotal) kpiAlcanceTotal.textContent = valContratadoStr;
+        if (kpiAlcanceM) kpiAlcanceM.textContent = valContratadoSubStr;
+        if (kpiCuatrenio) kpiCuatrenio.textContent = valCuatrenioStr;
+        if (kpiCuatrenioSub) kpiCuatrenioSub.textContent = valCuatrenioSubStr;
+        if (kpiInversion) kpiInversion.textContent = formatCurrency(totalInversion);
+
+        const restante = Math.max(metaCuatrienio - valCuatrenioNum, 0);
+        if (kpiMetaRestante) {
+            const resFmt = currentCfg.tipo === 'km' ? `${restante.toFixed(2)} km` : (currentCfg.tipo === 'm2' ? formatNumber(Math.round(restante)) + ' m²' : `${restante} und`);
+            kpiMetaRestante.textContent = `Restante: ${resFmt}`;
+        }
+
+        renderModalTable(searchInput ? searchInput.value : '');
+    }
+
+    // 5. Escuchadores de eventos para los filtros (Vigencia y Clasificación)
+    if (selVigenciaEl) selVigenciaEl.onchange = applyModalFilters;
+    if (selClasificacionEl) selClasificacionEl.onchange = applyModalFilters;
+
+    if (btnResetFilters) {
+        btnResetFilters.onclick = () => {
+            if (selVigenciaEl) {
+                Array.from(selVigenciaEl.options).forEach(o => o.selected = false);
+                selVigenciaEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (selClasificacionEl) {
+                Array.from(selClasificacionEl.options).forEach(o => o.selected = false);
+                selClasificacionEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            applyModalFilters();
+        };
+    }
+
+    // Input de Búsqueda local
     if (searchInput) {
         searchInput.value = '';
-        searchInput.oninput = (e) => renderTable(e.target.value);
+        searchInput.oninput = (e) => renderModalTable(e.target.value);
     }
 
-    // Configurar Botón Exportar PDF
-    const btnPdf = document.getElementById('btn-modal-ind-export-pdf');
+    // Botón Exportar PDF
     if (btnPdf) {
-        btnPdf.onclick = () => exportIndicadorReportPDF(indKey);
+        btnPdf.onclick = () => exportIndicadorReportPDF();
     }
 
-    // Configurar Botones de Cierre
+    // Botones de Cierre
     const btnClose = document.getElementById('btn-close-modal-indicador');
     const btnCloseFooter = document.getElementById('btn-close-modal-indicador-footer');
-    const closeModal = () => {
+    const closeIndicadorModal = () => {
         modalEl.classList.add('hidden');
         modalEl.style.display = 'none';
         document.body.classList.remove('overflow-hidden');
     };
-    if (btnClose) btnClose.onclick = closeModal;
-    if (btnCloseFooter) btnCloseFooter.onclick = closeModal;
+    if (btnClose) btnClose.onclick = closeIndicadorModal;
+    if (btnCloseFooter) btnCloseFooter.onclick = closeIndicadorModal;
 
     modalEl.onclick = (e) => {
-        if (e.target === modalEl) closeModal();
+        if (e.target === modalEl) closeIndicadorModal();
     };
 
-    renderTable('');
+    // Aplicar filtros iniciales
+    applyModalFilters();
 
+    // Mostrar modal
     modalEl.classList.remove('hidden');
     modalEl.style.display = 'flex';
     document.body.classList.add('overflow-hidden');
 };
 
 /**
- * Exporta el reporte del indicador a una ventana de impresión / PDF estilizada
+ * Exporta el informe oficial de cumplimiento de metas por indicador en PDF.
+ * Genera la matriz de ejecución por anualidades (Imagen 2) + anexo de convenios según filtros seleccionados.
  */
-window.exportIndicadorReportPDF = function (indKey) {
-    if (!indKey) return;
-    const normalizedKey = (typeof normalizarIndicador === 'function' ? normalizarIndicador(indKey) : '') || indKey;
-    const cfg = (typeof indicadoresEstrategicos !== 'undefined' && (indicadoresEstrategicos[normalizedKey] || indicadoresEstrategicos[indKey]))
-        || { unit: 'und', tipo: 'und', metas: { todos: 0 } };
-    const relatedRows = (rawData || []).filter(r => {
-        const rInd = typeof normalizarIndicador === 'function' ? normalizarIndicador(r['INDICADOR']) : (r['INDICADOR'] || '');
-        return rInd === normalizedKey || r['INDICADOR'] === normalizedKey || rInd === indKey;
-    });
-
-    const printWin = window.open('', '_blank', 'width=1100,height=850');
-    if (!printWin) {
-        alert("Por favor permite las ventanas emergentes en tu navegador para generar el reporte en PDF.");
-        return;
+window.exportIndicadorReportPDF = async function () {
+    const btnPdf = document.getElementById('btn-modal-ind-export-pdf');
+    if (btnPdf) {
+        btnPdf.disabled = true;
+        btnPdf.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Generando PDF...`;
     }
 
-    let totalLongM = 0;
-    let totalCuatM = 0;
-    let totalInv = 0;
+    try {
+        if (typeof alertToast === 'function') {
+            alertToast("Generando PDF", "Construyendo informe consolidado de indicadores...", "success");
+        }
 
-    let rowsHtml = '';
-    relatedRows.forEach((r) => {
-        const conv = r['CONVENIO'] || '';
-        const mun = r['MUNICIPIO'] || '';
-        const sub = r['SUBREGION'] || '';
-        const clasif = String(r['CLASIFICACION'] || r['CLASIFICACIÓN'] || r['CLASIFICACIN'] || 'N/A').trim().toUpperCase();
-        const via = r['VIA_PRIORIZADA'] || r['OBJETO'] || '';
-        const inv = (parseNum(r['APORTE DEPARTAMENTO']) || 0) + (parseNum(r['ADICION DEPARTAMENTO']) || 0);
-        totalInv += inv;
+        const filteredRows = window.currentModalFilteredRows && window.currentModalFilteredRows.length > 0
+            ? window.currentModalFilteredRows
+            : (rawData || []);
 
-        const le = parseNum(r['LONGITUD EJECUTADA']) || 0;
-        let lc = parseNum(r['LONGITUD EJECUTADA CUATRENIO']) || 0;
-        if (!isCuatrenioAnterior(r) && lc === 0 && le > 0) lc = le;
-        totalLongM += le;
-        totalCuatM += lc;
+        const cfg = window.currentModalIndCfg || { unit: 'km', tipo: 'km', metas: { todos: 500 } };
+        const activeFilters = window.currentModalActiveFilters || { vigencias: [], indicadores: [], clasificaciones: [] };
 
-        const ae = parseNum(r['AREA EJECUTADA (M2)']) || 0;
-        let ac = parseNum(r['AREA EJECUTADA CUATRENIO (M2)']) || 0;
-        if (!isCuatrenioAnterior(r) && ac === 0 && ae > 0) ac = ae;
+        // 1. Título y nombres de los indicadores
+        let indTitle = 'VÍAS TERCIARIAS MEJORADAS. (RVT)';
+        if (activeFilters.indicadores && activeFilters.indicadores.length === 1) {
+            indTitle = activeFilters.indicadores[0];
+        } else if (activeFilters.indicadores && activeFilters.indicadores.length > 1) {
+            indTitle = activeFilters.indicadores.join(', ');
+        }
+        const normIndTitle = (typeof normalizarIndicador === 'function' ? normalizarIndicador(indTitle) : '') || indTitle;
 
-        const fisVal = parseNum(r['FISICO_NORM']) || parseNum(r['% EJECUCION FISICA']) || 0;
-        const finVal = parseNum(r['FINANCIERO_NORM']) || parseNum(r['% EJECUCION FINANCIERA (RECURSOS DEPARTAMENTO)']) || parseNum(r['% EJECUCION FINANCIERA']) || 0;
-        const est = r['ESTADO CONVENIO'] || 'N/A';
+        // Meta oficial
+        let metaVal = 500;
+        if (activeFilters.indicadores && activeFilters.indicadores.length === 1 && cfg.metas) {
+            metaVal = cfg.metas['todos'] || 0;
+        } else if (activeFilters.indicadores && activeFilters.indicadores.length > 1) {
+            metaVal = activeFilters.indicadores.reduce((acc, k) => {
+                const kNorm = typeof normalizarIndicador === 'function' ? normalizarIndicador(k) : k;
+                const c = (indicadoresEstrategicos && (indicadoresEstrategicos[kNorm] || indicadoresEstrategicos[k])) || { metas: { todos: 0 } };
+                return acc + (c.metas['todos'] || 0);
+            }, 0);
+        } else if (cfg.metas) {
+            metaVal = cfg.metas['todos'] || 500;
+        }
 
-        let alcanceTotFmt = cfg.tipo === 'km' ? `${(le / 1000).toFixed(2)} km (${formatNumber(Math.round(le))} m)` : (cfg.tipo === 'm2' ? `${formatNumber(Math.round(ae))} m²` : '1 und');
-        let alcanceCuatFmt = cfg.tipo === 'km' ? `${(lc / 1000).toFixed(2)} km (${formatNumber(Math.round(lc))} m)` : (cfg.tipo === 'm2' ? `${formatNumber(Math.round(ac))} m²` : '1 und');
+        const unitLabel = cfg.tipo === 'km' ? 'KM' : (cfg.tipo === 'm2' ? 'M²' : 'UND');
+        const bannerMeta = `LA META EN EL PLAN DE DESARROLLO ES DE ${metaVal} ${unitLabel} DE ${normIndTitle.toUpperCase()}`;
 
-        rowsHtml += `
-            <tr style="border-bottom: 1px solid #E2E8F0; font-size: 11px;">
-                <td style="padding: 6px 8px; font-weight: bold; font-family: monospace;">${conv}</td>
-                <td style="padding: 6px 8px;"><strong>${mun}</strong><br><span style="color:#64748B;font-size:10px;">${sub}</span></td>
-                <td style="padding: 6px 8px;"><strong>${clasif}</strong><br><span style="color:#64748B;font-size:10px;">${via}</span></td>
-                <td style="padding: 6px 8px; text-align: center;"><span style="background:#F1F5F9;padding:2px 6px;border-radius:4px;font-size:9.5px;font-weight:bold;">${est}</span></td>
-                <td style="padding: 6px 8px; text-align: right; font-weight: bold; color: #92400E; background: #FEF3C7;">${alcanceCuatFmt}</td>
-                <td style="padding: 6px 8px; text-align: right;">${formatCurrency(inv)}</td>
-                <td style="padding: 6px 8px; text-align: center;"><strong>Fís:</strong> ${Math.round(fisVal)}% &nbsp;|&nbsp; <span style="color:#2563EB;"><strong>Fin:</strong> ${Math.round(finVal)}%</span></td>
-            </tr>
-        `;
-    });
+        // 2. Calcular los Datos de Ejecución Anual Cuatrienio (2024 - 2027)
+        // Estrictamente enfocado en el periodo constitucional 2024-2027
+        const cuatrenioYears = ['2024', '2025', '2026', '2027'];
 
-    let totalTotFmt = cfg.tipo === 'km' ? `${(totalLongM / 1000).toFixed(2)} km (${formatNumber(Math.round(totalLongM))} m)` : `${formatNumber(Math.round(totalLongM))} m²`;
-    let totalCuatFmt = cfg.tipo === 'km' ? `${(totalCuatM / 1000).toFixed(2)} km (${formatNumber(Math.round(totalCuatM))} m)` : `${formatNumber(Math.round(totalCuatM))} m²`;
+        const contratadoData = { '2024': 0, '2025': 0, '2026': 0, '2027': 0 };
+        const ejecutadoActualData = { '2024': 0, '2025': 0, '2026': 0, '2027': 0 };
+        const ejecutadoHeredadoData = { '2024': 0, '2025': 0, '2026': 0, '2027': 0 };
 
-    printWin.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Reporte Indicador - ${indKey}</title>
-            <style>
-                body { font-family: Arial, sans-serif; color: #0F172A; padding: 25px; margin: 0; }
-                h1 { font-size: 18px; color: #0B5640; margin: 0 0 4px 0; }
-                p { font-size: 11px; color: #64748B; margin: 0 0 15px 0; }
-                .kpi-box { display: inline-block; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 15px; margin-right: 10px; margin-bottom: 15px; vertical-align: top; }
-                .kpi-title { font-size: 9px; text-transform: uppercase; color: #64748B; font-weight: bold; margin-bottom: 3px; }
-                .kpi-val { font-size: 16px; font-weight: bold; color: #0F172A; }
-                table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-                th { background: #F1F5F9; color: #475569; font-size: 10px; text-transform: uppercase; padding: 8px; text-align: left; border-bottom: 2px solid #CBD5E1; }
-                tfoot tr td { background: #E2E8F0; font-weight: bold; font-size: 11px; padding: 8px; }
-                @media print { .no-print { display: none; } }
-            </style>
-        </head>
-        <body>
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 15px; border-bottom: 2px solid #0B5640; padding-bottom: 10px;">
-                <div>
-                    <h1>INFORME DE CUMPLIMIENTO POR INDICADOR</h1>
-                    <h2 style="font-size: 14px; color: #334155; margin: 3px 0;">${indKey}</h2>
-                    <p>Secretaría de Infraestructura Física de Antioquia • DIAT • Generado el ${new Date().toLocaleDateString('es-CO')}</p>
-                </div>
-                <button class="no-print" onclick="window.print()" style="background:#0B5640;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-weight:bold;cursor:pointer;">Imprimir / Guardar PDF</button>
-            </div>
-            <div>
-                <div class="kpi-box"><div class="kpi-title">Convenios Asignados</div><div class="kpi-val">${relatedRows.length}</div></div>
-                <div class="kpi-box"><div class="kpi-title">Alcance Total Ejecutado</div><div class="kpi-val" style="color:#059669;">${totalTotFmt}</div></div>
-                <div class="kpi-box" style="border-color:#FCD34D;background:#FFFBEB;"><div class="kpi-title" style="color:#92400E;">Aporte Este Cuatrienio</div><div class="kpi-val" style="color:#B45309;">${totalCuatFmt}</div></div>
-                <div class="kpi-box"><div class="kpi-title">Inversión Total</div><div class="kpi-val">${formatCurrency(totalInv)}</div></div>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Convenio</th>
-                        <th>Municipio / Subregión</th>
-                        <th>Clasificación</th>
-                        <th style="text-align:center;">Estado</th>
-                        <th style="text-align:right;background:#FEF3C7;color:#92400E;">Aporte Cuatrienio</th>
-                        <th style="text-align:right;">Inversión</th>
-                        <th style="text-align:center;">% Físico / Financiero</th>
-                    </tr>
-                </thead>
-                <tbody>${rowsHtml}</tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="4">TOTAL (${relatedRows.length} convenios)</td>
-                        <td style="text-align:right;color:#92400E;background:#FEF3C7;">${totalCuatFmt}</td>
-                        <td style="text-align:right;">${formatCurrency(totalInv)}</td>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            </table>
-        </body>
-        </html>
-    `);
-    printWin.document.close();
+        // Helper para determinar el año en que un convenio heredado aportó/culminó en el cuatrienio (2024-2027)
+        const getRowCompletionYear = (row) => {
+            const val = row['NUEVA FECHA DE TERMINACIÓN'] || row['NUEVA FECHA DE TERMINACION'] || row['NUEVA FECHA DE TERMINACIN']
+                || row['FECHA DE TERMINACIÓN'] || row['FECHA DE TERMINACION'] || row['FECHA DE TERMINACIN']
+                || row['FECHA DE TERMINACION DEL CONVENIO'];
+
+            if (val) {
+                const num = parseFloat(val);
+                if (!isNaN(num) && num > 30000 && num < 60000) {
+                    const date = new Date(Math.round((num - 25569) * 86400 * 1000));
+                    const y = String(date.getUTCFullYear());
+                    if (cuatrenioYears.includes(y)) return y;
+                    if (parseInt(y, 10) < 2024) return '2024';
+                    return '2027';
+                }
+
+                const str = String(val).trim();
+                const ddmmyyyy = str.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+                if (ddmmyyyy && ddmmyyyy[3]) {
+                    const y = ddmmyyyy[3];
+                    if (cuatrenioYears.includes(y)) return y;
+                    if (parseInt(y, 10) < 2024) return '2024';
+                    return '2027';
+                }
+
+                const yyyymmdd = str.match(/^(\d{4})[\/\-]/);
+                if (yyyymmdd && yyyymmdd[1]) {
+                    const y = yyyymmdd[1];
+                    if (cuatrenioYears.includes(y)) return y;
+                    if (parseInt(y, 10) < 2024) return '2024';
+                    return '2027';
+                }
+            }
+
+            return '2024';
+        };
+
+        filteredRows.forEach(row => {
+            const isHeredado = isCuatrenioAnterior(row);
+            const vigStr = String(row['VIGENCIA'] || '').replace('.0', '').trim();
+
+            let valContratado = 0;
+            let valEjecutadoCuat = 0;
+
+            if (cfg.tipo === 'km') {
+                const alcM = parseNum(row['ALCANCE (m)']) || parseNum(row['ALCANCE (M)']) || parseNum(row['LONGITUD TOTAL']) || parseNum(row['LONGITUD CONTRATADA']) || 0;
+                valContratado = alcM / 1000;
+
+                const le = parseNum(row['LONGITUD EJECUTADA']) || 0;
+                let lc = parseNum(row['LONGITUD EJECUTADA CUATRENIO']) || 0;
+                if (!isHeredado && lc === 0 && le > 0) lc = le;
+
+                valEjecutadoCuat = (lc > 0 ? lc : (isHeredado ? 0 : le)) / 1000;
+            } else if (cfg.tipo === 'm2') {
+                const alcM2 = parseNum(row['ALCANCE (M2)']) || parseNum(row['ALCANCE (m2)']) || parseNum(row['AREA CONTRATADA (M2)']) || 0;
+                valContratado = alcM2;
+
+                const ae = parseNum(row['AREA EJECUTADA (M2)']) || 0;
+                let ac = parseNum(row['AREA EJECUTADA CUATRENIO (M2)']) || 0;
+                if (!isHeredado && ac === 0 && ae > 0) ac = ae;
+
+                valEjecutadoCuat = ac > 0 ? ac : (isHeredado ? 0 : ae);
+            } else {
+                valContratado = 1;
+                const fis = parseNum(row['FISICO_NORM']) || 0;
+                const und = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
+                valEjecutadoCuat = und;
+            }
+
+            // Asignación a Contratado (estrictamente convenios contratados en el cuatrienio 2024-2027)
+            if (!isHeredado && cuatrenioYears.includes(vigStr)) {
+                contratadoData[vigStr] += valContratado;
+            }
+
+            // Asignación a Ejecutado
+            if (isHeredado) {
+                // Convenios heredados ejecutados en el cuatrienio discriminados por año
+                const compYear = getRowCompletionYear(row);
+                if (cuatrenioYears.includes(compYear)) {
+                    ejecutadoHeredadoData[compYear] += valEjecutadoCuat;
+                } else {
+                    ejecutadoHeredadoData['2024'] += valEjecutadoCuat;
+                }
+            } else {
+                // Convenios contratados en la administración actual (2024-2027)
+                if (cuatrenioYears.includes(vigStr)) {
+                    ejecutadoActualData[vigStr] += valEjecutadoCuat;
+                }
+            }
+        });
+
+        // Totales consolidados
+        let sumContratado = 0;
+        let sumActual = 0;
+        let sumHeredado = 0;
+        let sumTotalCuat = 0;
+
+        cuatrenioYears.forEach(y => {
+            sumContratado += (contratadoData[y] || 0);
+            sumActual += (ejecutadoActualData[y] || 0);
+            sumHeredado += (ejecutadoHeredadoData[y] || 0);
+        });
+        sumTotalCuat = sumActual + sumHeredado;
+
+        const pctCumplido = metaVal > 0 ? (sumTotalCuat / metaVal) * 100 : 0;
+        const restanteMeta = Math.max(metaVal - sumTotalCuat, 0);
+
+        // Formateador numérico
+        const fmtNum = (v) => {
+            if (cfg.tipo === 'km') {
+                return (v || 0).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            } else if (cfg.tipo === 'm2') {
+                return formatNumber(Math.round(v || 0));
+            } else {
+                return Number.isInteger(v) ? String(v) : (v || 0).toFixed(1);
+            }
+        };
+
+        const fmtWithUnit = (v) => `${fmtNum(v)} ${unitLabel.toLowerCase()}`;
+
+        // Construir Espacio 1: Tabla Contratado (Vigencias 2024-2027)
+        const tableContratadoBody = [];
+        tableContratadoBody.push([
+            { text: 'VIGENCIA', style: 'tableHeader', alignment: 'center', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 8 },
+            { text: 'CONTRATADO', style: 'tableHeader', alignment: 'right', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 8 }
+        ]);
+
+        cuatrenioYears.forEach(y => {
+            tableContratadoBody.push([
+                { text: y, alignment: 'center', bold: true, fontSize: 8.5 },
+                { text: fmtWithUnit(contratadoData[y]), alignment: 'right', fontSize: 8.5 }
+            ]);
+        });
+
+        tableContratadoBody.push([
+            { text: 'TOTAL', bold: true, alignment: 'center', fillColor: '#E2E8F0', fontSize: 8.5 },
+            { text: fmtWithUnit(sumContratado), bold: true, alignment: 'right', fillColor: '#E2E8F0', fontSize: 8.5 }
+        ]);
+
+        // Construir Espacio 2: Tabla Ejecutado (Vigencias 2024-2027 con discriminación de heredados)
+        const tableEjecucionBody = [];
+        tableEjecucionBody.push([
+            { text: 'VIGENCIA', style: 'tableHeader', alignment: 'center', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 7.5 },
+            { text: 'EJECUTADO', style: 'tableHeader', alignment: 'right', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 7.5 },
+            { text: 'HEREDADO', style: 'tableHeader', alignment: 'right', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 7.5 },
+            { text: 'EJECUTADO +\nHEREDADOS', style: 'tableHeader', alignment: 'right', fillColor: '#B45309', color: '#FFFFFF', bold: true, fontSize: 7.5 }
+        ]);
+
+        cuatrenioYears.forEach(y => {
+            const actualY = ejecutadoActualData[y] || 0;
+            const heredadoY = ejecutadoHeredadoData[y] || 0;
+            const totalY = actualY + heredadoY;
+
+            tableEjecucionBody.push([
+                { text: y, alignment: 'center', bold: true, fontSize: 8.5 },
+                { text: fmtWithUnit(actualY), alignment: 'right', fontSize: 8.5 },
+                { text: fmtWithUnit(heredadoY), alignment: 'right', fontSize: 8.5 },
+                { text: fmtWithUnit(totalY), alignment: 'right', bold: true, color: '#92400E', fillColor: '#FEF3C7', fontSize: 8.5 }
+            ]);
+        });
+
+        tableEjecucionBody.push([
+            { text: 'TOTAL', bold: true, alignment: 'center', fillColor: '#E2E8F0', fontSize: 8.5 },
+            { text: fmtWithUnit(sumActual), bold: true, alignment: 'right', fillColor: '#E2E8F0', fontSize: 8.5 },
+            { text: fmtWithUnit(sumHeredado), bold: true, alignment: 'right', fillColor: '#E2E8F0', fontSize: 8.5 },
+            { text: fmtWithUnit(sumTotalCuat), bold: true, alignment: 'right', fillColor: '#FDE68A', color: '#92400E', fontSize: 9 }
+        ]);
+
+        // 3. Cargar Escudo Institucional en Base64 si está disponible
+        let logoData = null;
+        if (typeof getBase64ImageFromURL === 'function') {
+            try {
+                logoData = await getBase64ImageFromURL('./assets/escudo_antioquia.png');
+            } catch (err) {
+                console.warn('[PDF] No se pudo cargar el escudo institucional:', err);
+            }
+        }
+
+        // 4. Construir Tabla Anexa de Convenios
+        const conveniosTableBody = [];
+        conveniosTableBody.push([
+            { text: 'Convenio', style: 'tableHeaderSmall', alignment: 'left' },
+            { text: 'Municipio / Subregión', style: 'tableHeaderSmall', alignment: 'left' },
+            { text: 'Clasificación', style: 'tableHeaderSmall', alignment: 'left' },
+            { text: 'Vigencia', style: 'tableHeaderSmall', alignment: 'center' },
+            { text: 'Estado', style: 'tableHeaderSmall', alignment: 'center' },
+            { text: 'Aporte Cuatrienio', style: 'tableHeaderSmall', alignment: 'right' },
+            { text: 'Inversión Dpto', style: 'tableHeaderSmall', alignment: 'right' },
+            { text: '% Físico', style: 'tableHeaderSmall', alignment: 'center' }
+        ]);
+
+        let totalInvConvenios = 0;
+        let totalAporteConvenios = 0;
+
+        // Ordenar convenios por vigencia (ascendente: 2020, 2021, 2022...), y luego por municipio y convenio
+        const sortedRows = [...filteredRows].sort((a, b) => {
+            const vigA = parseInt(String(a['VIGENCIA'] || '').replace('.0', '').trim(), 10) || 0;
+            const vigB = parseInt(String(b['VIGENCIA'] || '').replace('.0', '').trim(), 10) || 0;
+            if (vigA !== vigB) return vigA - vigB;
+            const munA = String(a['MUNICIPIO'] || '').trim();
+            const munB = String(b['MUNICIPIO'] || '').trim();
+            if (munA !== munB) return munA.localeCompare(munB, 'es');
+            const convA = String(a['CONVENIO'] || '').trim();
+            const convB = String(b['CONVENIO'] || '').trim();
+            return convA.localeCompare(convB, 'es');
+        });
+
+        // Contenedor de subtotales por vigencia
+        const vigenciaSummary = {};
+        let currentVigSection = null;
+
+        sortedRows.forEach((r, idx) => {
+            const vig = String(r['VIGENCIA'] || 'S/V').replace('.0', '').trim();
+            const isHeredado = isCuatrenioAnterior(r);
+
+            let aporteC = 0;
+            if (cfg.tipo === 'km') {
+                const le = parseNum(r['LONGITUD EJECUTADA']) || 0;
+                let lc = parseNum(r['LONGITUD EJECUTADA CUATRENIO']) || 0;
+                if (!isHeredado && lc === 0 && le > 0) lc = le;
+                aporteC = (lc > 0 ? lc : (isHeredado ? 0 : le)) / 1000;
+            } else if (cfg.tipo === 'm2') {
+                const ae = parseNum(r['AREA EJECUTADA (M2)']) || 0;
+                let ac = parseNum(r['AREA EJECUTADA CUATRENIO (M2)']) || 0;
+                if (!isHeredado && ac === 0 && ae > 0) ac = ae;
+                aporteC = ac > 0 ? ac : (isHeredado ? 0 : ae);
+            } else {
+                const fis = parseNum(r['FISICO_NORM']) || 0;
+                aporteC = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
+            }
+
+            const inv = (parseNum(r['APORTE DEPARTAMENTO']) || 0) + (parseNum(r['ADICION DEPARTAMENTO']) || 0);
+            totalInvConvenios += inv;
+            totalAporteConvenios += aporteC;
+
+            if (!vigenciaSummary[vig]) {
+                vigenciaSummary[vig] = { count: 0, aporte: 0, inversion: 0 };
+            }
+            vigenciaSummary[vig].count += 1;
+            vigenciaSummary[vig].aporte += aporteC;
+            vigenciaSummary[vig].inversion += inv;
+
+            // Encabezado visual de grupo cuando cambia la vigencia
+            if (currentVigSection !== vig) {
+                currentVigSection = vig;
+                const conveniosEnVig = sortedRows.filter(row => String(row['VIGENCIA'] || 'S/V').replace('.0', '').trim() === vig).length;
+                conveniosTableBody.push([
+                    {
+                        text: `VIGENCIA ${vig} (${conveniosEnVig} ${conveniosEnVig === 1 ? 'CONVENIO' : 'CONVENIOS'})`,
+                        colSpan: 8,
+                        bold: true,
+                        fontSize: 7.5,
+                        color: '#0B5640',
+                        fillColor: '#E6F4EA',
+                        margin: [2, 1.5, 2, 1.5]
+                    },
+                    {}, {}, {}, {}, {}, {}, {}
+                ]);
+            }
+
+            const conv = String(r['CONVENIO'] || '').trim();
+            const mun = String(r['MUNICIPIO'] || 'Antioquia').trim();
+            const sub = String(r['SUBREGION'] || '').trim();
+            const clasif = String(r['CLASIFICACION'] || r['CLASIFICACIÓN'] || r['CLASIFICACIN'] || 'N/A').trim().toUpperCase();
+            const est = String(r['ESTADO CONVENIO'] || 'N/A').trim();
+            const fisVal = parseNum(r['FISICO_NORM']) || parseNum(r['% EJECUCION FISICA']) || 0;
+            const bgRow = idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC';
+
+            conveniosTableBody.push([
+                { text: conv, bold: true, fontSize: 7.5, font: 'Roboto', fillColor: bgRow },
+                { text: `${mun}\n${sub}`, fontSize: 7, fillColor: bgRow },
+                { text: clasif, fontSize: 7, fillColor: bgRow },
+                { text: vig, alignment: 'center', fontSize: 7, fillColor: bgRow },
+                { text: est, alignment: 'center', fontSize: 6.5, fillColor: bgRow },
+                { text: `${fmtNum(aporteC)} ${unitLabel.toLowerCase()}`, alignment: 'right', bold: true, color: '#92400E', fontSize: 7.5, fillColor: bgRow },
+                { text: formatCurrency(inv), alignment: 'right', fontSize: 7, fillColor: bgRow },
+                { text: `${Math.round(fisVal)}%`, alignment: 'center', bold: true, fontSize: 7, fillColor: bgRow }
+            ]);
+        });
+
+        // Subtotales al final de la tabla sumando el aporte cuatrienio por cada año/vigencia (2021, 2022, ...)
+        const sortedVigKeys = Object.keys(vigenciaSummary).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+        sortedVigKeys.forEach(vig => {
+            const sumData = vigenciaSummary[vig];
+            conveniosTableBody.push([
+                {
+                    text: `SUBTOTAL VIGENCIA ${vig} (${sumData.count} ${sumData.count === 1 ? 'Convenio' : 'Convenios'})`,
+                    colSpan: 5,
+                    bold: true,
+                    fontSize: 7.5,
+                    color: '#1E293B',
+                    fillColor: '#F1F5F9'
+                },
+                {}, {}, {}, {},
+                {
+                    text: `${fmtNum(sumData.aporte)} ${unitLabel.toLowerCase()}`,
+                    alignment: 'right',
+                    bold: true,
+                    color: '#0B5640',
+                    fontSize: 7.5,
+                    fillColor: '#E6F4EA'
+                },
+                {
+                    text: formatCurrency(sumData.inversion),
+                    alignment: 'right',
+                    bold: true,
+                    fontSize: 7,
+                    fillColor: '#F1F5F9'
+                },
+                { text: '', fillColor: '#F1F5F9' }
+            ]);
+        });
+
+        // Fila Total General Consolidado
+        conveniosTableBody.push([
+            { text: `TOTAL GENERAL (${sortedRows.length} Convenios)`, colSpan: 5, bold: true, fontSize: 8, fillColor: '#E2E8F0' },
+            {}, {}, {}, {},
+            { text: `${fmtNum(totalAporteConvenios)} ${unitLabel.toLowerCase()}`, alignment: 'right', bold: true, color: '#92400E', fontSize: 8, fillColor: '#FEF3C7' },
+            { text: formatCurrency(totalInvConvenios), alignment: 'right', bold: true, fontSize: 8, fillColor: '#E2E8F0' },
+            { text: '', fillColor: '#E2E8F0' }
+        ]);
+
+        // Tabla de Resumen Ejecutivo por Vigencia al pie del anexo
+        const vigenciaResumenTableBody = [
+            [
+                { text: 'VIGENCIA', style: 'tableHeader', alignment: 'center', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 8 },
+                { text: 'N° CONVENIOS', style: 'tableHeader', alignment: 'center', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 8 },
+                { text: `APORTE CUATRIENIO (${unitLabel})`, style: 'tableHeader', alignment: 'right', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 8 },
+                { text: 'INVERSIÓN TOTAL DPTO', style: 'tableHeader', alignment: 'right', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 8 }
+            ]
+        ];
+
+        sortedVigKeys.forEach(vig => {
+            const sumData = vigenciaSummary[vig];
+            vigenciaResumenTableBody.push([
+                { text: `Vigencia ${vig}`, alignment: 'center', bold: true, fontSize: 8 },
+                { text: `${sumData.count} ${sumData.count === 1 ? 'convenio' : 'convenios'}`, alignment: 'center', fontSize: 8 },
+                { text: `${fmtNum(sumData.aporte)} ${unitLabel.toLowerCase()}`, alignment: 'right', bold: true, color: '#0B5640', fontSize: 8 },
+                { text: formatCurrency(sumData.inversion), alignment: 'right', fontSize: 8 }
+            ]);
+        });
+
+        vigenciaResumenTableBody.push([
+            { text: 'TOTAL', bold: true, alignment: 'center', fillColor: '#E2E8F0', fontSize: 8.5 },
+            { text: `${sortedRows.length} convenios`, bold: true, alignment: 'center', fillColor: '#E2E8F0', fontSize: 8.5 },
+            { text: `${fmtNum(totalAporteConvenios)} ${unitLabel.toLowerCase()}`, bold: true, alignment: 'right', fillColor: '#FEF3C7', color: '#92400E', fontSize: 9 },
+            { text: formatCurrency(totalInvConvenios), bold: true, alignment: 'right', fillColor: '#E2E8F0', fontSize: 8.5 }
+        ]);
+
+        // 5. Configurar documento pdfMake
+        const docDefinition = {
+            pageSize: 'A4',
+            pageOrientation: 'portrait',
+            pageMargins: [32, 32, 32, 32],
+            content: [
+                // Header Institucional
+                {
+                    columns: [
+                        logoData ? { image: logoData, width: 38, alignment: 'left' } : { text: 'DIAT', bold: true, color: '#0B5640', fontSize: 16 },
+                        {
+                            width: '*',
+                            margin: [10, 0, 0, 0],
+                            stack: [
+                                { text: 'GOBERNACIÓN DE ANTIOQUIA • SECRETARÍA DE INFRAESTRUCTURA FÍSICA', fontSize: 9.5, bold: true, color: '#0B5640' },
+                                { text: 'DIRECCIÓN DE INFORMACIÓN Y ANALÍTICA TERRITORIAL (DIAT)', fontSize: 8, color: '#475569', margin: [0, 1, 0, 0] },
+                                { text: 'INFORME DE CUMPLIMIENTO DE METAS POR INDICADOR', fontSize: 13, bold: true, color: '#0F172A', margin: [0, 4, 0, 0] }
+                            ]
+                        },
+                        {
+                            width: 'auto',
+                            alignment: 'right',
+                            stack: [
+                                { text: 'VIGENCIA 2024-2027', fontSize: 7.5, bold: true, color: '#0B5640', background: '#E6F4EA', padding: [4, 2] },
+                                { text: `Fecha: ${new Date().toLocaleDateString('es-CO')}`, fontSize: 7.5, color: '#64748B', margin: [0, 4, 0, 0] }
+                            ]
+                        }
+                    ]
+                },
+                { canvas: [{ type: 'line', x1: 0, y1: 8, x2: 531, y2: 8, lineWidth: 2, lineColor: '#0B5640' }] },
+
+                // Banner Meta Destacada
+                {
+                    margin: [0, 12, 0, 10],
+                    table: {
+                        widths: ['*'],
+                        body: [[
+                            {
+                                text: bannerMeta,
+                                bold: true,
+                                alignment: 'center',
+                                fontSize: 10.5,
+                                color: '#0F172A',
+                                fillColor: '#F8FAFC',
+                                border: [true, true, true, true],
+                                borderColor: '#CBD5E1',
+                                margin: [6, 6, 6, 6]
+                            }
+                        ]]
+                    }
+                },
+
+                // Filtros Activos Aplicados
+                {
+                    margin: [0, 0, 0, 12],
+                    table: {
+                        widths: ['*'],
+                        body: [[
+                            {
+                                fillColor: '#F1F5F9',
+                                border: [false, false, false, false],
+                                stack: [
+                                    {
+                                        columns: [
+                                            { text: [{ text: 'Indicador: ', bold: true }, normIndTitle], fontSize: 8, color: '#334155' },
+                                            { text: [{ text: 'Vigencia(s): ', bold: true }, activeFilters.vigencias && activeFilters.vigencias.length > 0 ? activeFilters.vigencias.join(', ') : 'Todas'], fontSize: 8, color: '#334155' },
+                                            { text: [{ text: 'Clasificación(es): ', bold: true }, activeFilters.clasificaciones && activeFilters.clasificaciones.length > 0 ? activeFilters.clasificaciones.join(', ') : 'Todas'], fontSize: 8, color: '#334155' }
+                                        ]
+                                    },
+                                    {
+                                        text: `Convenios Seleccionados: ${filteredRows.length} | Inversión Total Dpto: ${formatCurrency(totalInvConvenios)} | Aporte Este Cuatrienio: ${fmtNum(sumTotalCuat)} ${unitLabel.toLowerCase()}`,
+                                        fontSize: 8,
+                                        bold: true,
+                                        color: '#0B5640',
+                                        margin: [0, 4, 0, 0]
+                                    }
+                                ]
+                            }
+                        ]]
+                    }
+                },
+
+                // DOS ESPACIOS: ESPACIO 1 (CONTRATADO) y ESPACIO 2 (EJECUTADO Y CUATRIENIO)
+                {
+                    columns: [
+                        // ESPACIO 1: CONTRATADO
+                        {
+                            width: '30%',
+                            stack: [
+                                {
+                                    text: 'ESPACIO 1: CONTRATADO',
+                                    fontSize: 8.5,
+                                    bold: true,
+                                    color: '#0B5640',
+                                    margin: [0, 0, 0, 4]
+                                },
+                                {
+                                    table: {
+                                        widths: [42, '*'],
+                                        headerRows: 1,
+                                        body: tableContratadoBody
+                                    },
+                                    layout: {
+                                        hLineWidth: () => 0.6,
+                                        vLineWidth: () => 0.6,
+                                        hLineColor: () => '#CBD5E1',
+                                        vLineColor: () => '#CBD5E1',
+                                        paddingLeft: () => 4,
+                                        paddingRight: () => 4,
+                                        paddingTop: () => 3.5,
+                                        paddingBottom: () => 3.5
+                                    }
+                                }
+                            ]
+                        },
+                        // ESPACIADOR
+                        {
+                            width: '4%',
+                            text: ''
+                        },
+                        // ESPACIO 2: EJECUTADO
+                        {
+                            width: '66%',
+                            stack: [
+                                {
+                                    text: 'ESPACIO 2: EJECUTADO',
+                                    fontSize: 8.5,
+                                    bold: true,
+                                    color: '#0B5640',
+                                    margin: [0, 0, 0, 4]
+                                },
+                                {
+                                    table: {
+                                        widths: [36, 68, 68, '*'],
+                                        headerRows: 1,
+                                        body: tableEjecucionBody
+                                    },
+                                    layout: {
+                                        hLineWidth: () => 0.6,
+                                        vLineWidth: () => 0.6,
+                                        hLineColor: () => '#CBD5E1',
+                                        vLineColor: () => '#CBD5E1',
+                                        paddingLeft: () => 3,
+                                        paddingRight: () => 3,
+                                        paddingTop: () => 3.5,
+                                        paddingBottom: () => 3.5
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+
+                // Resumen Consolidado de Cumplimiento de Metas
+                {
+                    margin: [0, 14, 0, 0],
+                    table: {
+                        widths: ['*'],
+                        body: [[
+                            {
+                                fillColor: '#F8FAFC',
+                                border: [true, true, true, true],
+                                borderColor: '#CBD5E1',
+                                stack: [
+                                    {
+                                        columns: [
+                                            {
+                                                width: '25%',
+                                                stack: [
+                                                    { text: 'META OFICIAL PLAN', fontSize: 7, bold: true, color: '#64748B' },
+                                                    { text: `${fmtNum(metaVal)} ${unitLabel.toLowerCase()}`, fontSize: 10.5, bold: true, color: '#0F172A', margin: [0, 2, 0, 0] }
+                                                ]
+                                            },
+                                            {
+                                                width: '25%',
+                                                stack: [
+                                                    { text: 'APORTE CUATRIENIO', fontSize: 7, bold: true, color: '#B45309' },
+                                                    { text: `${fmtNum(sumTotalCuat)} ${unitLabel.toLowerCase()}`, fontSize: 10.5, bold: true, color: '#B45309', margin: [0, 2, 0, 0] }
+                                                ]
+                                            },
+                                            {
+                                                width: '25%',
+                                                stack: [
+                                                    { text: 'CUMPLIMIENTO DE META', fontSize: 7, bold: true, color: '#0B5640' },
+                                                    { text: `${pctCumplido.toFixed(1)}%`, fontSize: 10.5, bold: true, color: '#0B5640', margin: [0, 2, 0, 0] }
+                                                ]
+                                            },
+                                            {
+                                                width: '25%',
+                                                stack: [
+                                                    { text: 'RESTANTE POR EJECUTAR', fontSize: 7, bold: true, color: '#64748B' },
+                                                    { text: `${fmtNum(restanteMeta)} ${unitLabel.toLowerCase()}`, fontSize: 10.5, bold: true, color: '#64748B', margin: [0, 2, 0, 0] }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]]
+                    }
+                },
+
+                // Anexo Detallado de Convenios (Página 2)
+                {
+                    text: 'ANEXO: LISTADO DETALLADO DE CONVENIOS CONSOLIDADOS',
+                    pageBreak: 'before',
+                    fontSize: 11,
+                    bold: true,
+                    color: '#0B5640',
+                    margin: [0, 0, 0, 6]
+                },
+                {
+                    text: `Mostrando ${filteredRows.length} convenios asociados a los filtros activos seleccionados:`,
+                    fontSize: 8,
+                    color: '#64748B',
+                    margin: [0, 0, 0, 8]
+                },
+                {
+                    table: {
+                        headerRows: 1,
+                        widths: ['14%', '19%', '17%', '9%', '11%', '13%', '12%', '5%'],
+                        body: conveniosTableBody
+                    },
+                    layout: {
+                        hLineWidth: (i, node) => 0.5,
+                        vLineWidth: (i, node) => 0.5,
+                        hLineColor: (i, node) => '#E2E8F0',
+                        vLineColor: (i, node) => '#E2E8F0',
+                        paddingLeft: (i) => 3,
+                        paddingRight: (i) => 3,
+                        paddingTop: (i) => 3,
+                        paddingBottom: (i) => 3
+                    }
+                },
+
+                // Resumen Ejecutivo Consolidado de Aporte Cuatrienio por Vigencia
+                {
+                    margin: [0, 16, 0, 0],
+                    unbreakable: true,
+                    stack: [
+                        {
+                            text: 'RESUMEN CONSOLIDADO DE APORTE AL CUATRIENIO POR VIGENCIA DE CONTRATACIÓN',
+                            fontSize: 9.5,
+                            bold: true,
+                            color: '#0B5640',
+                            margin: [0, 0, 0, 6]
+                        },
+                        {
+                            table: {
+                                widths: ['25%', '25%', '25%', '25%'],
+                                headerRows: 1,
+                                body: vigenciaResumenTableBody
+                            },
+                            layout: {
+                                hLineWidth: () => 0.6,
+                                vLineWidth: () => 0.6,
+                                hLineColor: () => '#CBD5E1',
+                                vLineColor: () => '#CBD5E1',
+                                paddingLeft: () => 6,
+                                paddingRight: () => 6,
+                                paddingTop: () => 4,
+                                paddingBottom: () => 4
+                            }
+                        }
+                    ]
+                }
+            ],
+            styles: {
+                tableHeader: {
+                    fontSize: 8,
+                    bold: true,
+                    color: '#0F172A',
+                    fillColor: '#F8FAFC'
+                },
+                tableHeaderSmall: {
+                    fontSize: 7,
+                    bold: true,
+                    color: '#0F172A',
+                    fillColor: '#F1F5F9'
+                }
+            },
+            defaultStyle: {
+                fontSize: 8,
+                font: 'Roboto',
+                color: '#1E293B'
+            }
+        };
+
+        const cleanFileName = `Informe_Indicador_${normIndTitle.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30)}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        pdfMake.createPdf(docDefinition).download(cleanFileName);
+
+        if (typeof alertToast === 'function') {
+            alertToast("PDF Generado", "El informe oficial ha sido descargado exitosamente.", "success");
+        }
+    } catch (err) {
+        console.error('[exportIndicadorReportPDF] Error:', err);
+        if (typeof alertToast === 'function') {
+            alertToast("Error al exportar", err.message || "No se pudo generar el PDF", "error");
+        } else {
+            alert("Error al generar el PDF: " + err.message);
+        }
+    } finally {
+        if (btnPdf) {
+            btnPdf.disabled = false;
+            btnPdf.innerHTML = `<i class="fa-solid fa-file-pdf text-sm mr-1"></i> Imprimir Informe PDF`;
+        }
+    }
 };
 
 // ============================================================
@@ -13680,7 +14430,7 @@ function initSearchableDropdown(selectId, placeholder = "Seleccionar...") {
     const btnClearAll = dropdown.querySelector('.btn-clear-all');
 
     function updateTriggerText() {
-        const selectedOpts = Array.from(nativeSelect.options).filter(o => o.selected && o.value !== '' && o.value !== 'todos' && o.value !== 'TODOS');
+        const selectedOpts = Array.from(nativeSelect.options || []).filter(o => o.selected && o.value !== '' && o.value !== 'todos' && o.value !== 'TODOS');
         const triggerText = trigger.querySelector('.trigger-text');
 
         if (selectedOpts.length === 0) {
@@ -13712,7 +14462,7 @@ function initSearchableDropdown(selectId, placeholder = "Seleccionar...") {
     // Función para reconstruir las opciones
     function rebuildOptions() {
         optionsContainer.innerHTML = '';
-        const options = Array.from(nativeSelect.options);
+        const options = Array.from(nativeSelect.options || []);
 
         if (options.length === 0) {
             optionsContainer.innerHTML = `<div class="custom-select-no-results">No hay opciones disponibles</div>`;
@@ -13902,6 +14652,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initSearchableDropdown('map-filter-subregion', 'Seleccionar Subregión...');
     initSearchableDropdown('map-filter-estado', 'Seleccionar Estado...');
     initSearchableDropdown('map-filter-convenio-num', 'Seleccionar N° Convenio...');
+
+    initSearchableDropdown('modal-filter-vigencia', 'Todas las Vigencias...');
+    initSearchableDropdown('modal-filter-clasificacion', 'Todas las Clasificaciones...');
 
     // Contador de filtros activos
     const mainFilters = [

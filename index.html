@@ -611,47 +611,80 @@
                                                 </div>
                                             </div>
 
-                                            <!-- Caja 2: Longitud Ejecutada -->
-                                            <div id="btn-metric-longitud"
-                                                class="cursor-pointer transition-all duration-200 flex flex-col justify-between gap-1 p-2.5 rounded-xl border border-emerald-200/70 bg-emerald-50/60 hover:bg-emerald-100/60 min-h-[66px]"
-                                                onclick="toggleFisicoMetric('longitud')">
+                                            <!-- Caja 2: Alcance Ejecutado Unificado (Longitud / Área) -->
+                                            <div id="card-metric-unified"
+                                                class="flex flex-col justify-between gap-1 p-2.5 rounded-xl border border-slate-100 bg-slate-50 min-h-[66px] transition-all duration-200">
                                                 <div class="flex items-center justify-between gap-1">
                                                     <span
                                                         class="text-[10px] font-bold text-emerald-800 truncate flex items-center gap-1 uppercase tracking-wide">
                                                         <span
                                                             class="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0"></span>
-                                                        Long. Ejecutada
+                                                        <span id="label-metric-unified">Long. Ejecutada</span>
                                                     </span>
+                                                    <!-- Selector Pill dentro de la tarjeta -->
+                                                    <div class="inline-flex p-0.5 bg-slate-200/80 rounded-md text-[9px] font-bold shrink-0 shadow-inner"
+                                                        role="tablist" aria-label="Seleccionar métrica">
+                                                        <button type="button" id="btn-metric-longitud"
+                                                            class="px-1.5 py-0.5 rounded transition-all cursor-pointer font-bold bg-white text-emerald-800 shadow-xs"
+                                                            onclick="toggleFisicoMetric('longitud')"
+                                                            title="Ver Longitud Ejecutada">
+                                                            Long.
+                                                        </button>
+                                                        <button type="button" id="btn-metric-area"
+                                                            class="px-1.5 py-0.5 rounded transition-all cursor-pointer font-semibold text-slate-500 hover:text-slate-800"
+                                                            onclick="toggleFisicoMetric('area')"
+                                                            title="Ver Área Ejecutada">
+                                                            Área
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Vista Métrica Longitud -->
+                                                <div id="view-metric-longitud" class="flex items-baseline justify-between gap-1">
+                                                    <h3 class="text-sm font-extrabold text-emerald-900 truncate tracking-tight"
+                                                        id="tot-lon-eje-text">0.00 km</h3>
                                                     <span class="text-[9px] text-slate-500 font-semibold truncate">de
                                                         <span id="tot-lon-con-text">0.00 km</span></span>
                                                 </div>
-                                                <h3 class="text-sm font-extrabold text-emerald-900 truncate tracking-tight"
-                                                    id="tot-lon-eje-text">0.00 km</h3>
-                                                <div
-                                                    class="w-full h-1.5 bg-emerald-200/60 rounded-full overflow-hidden">
-                                                    <div class="h-full rounded-full bg-emerald-600"
-                                                        style="width: 100%;"></div>
+
+                                                <!-- Vista Métrica Área -->
+                                                <div id="view-metric-area" class="hidden items-baseline justify-between gap-1">
+                                                    <h3 class="text-sm font-extrabold text-slate-800 truncate tracking-tight"
+                                                        id="tot-are-eje-text">0 m²</h3>
+                                                    <span class="text-[9px] text-slate-500 font-semibold truncate">de
+                                                        <span id="tot-are-con-text">0</span> m²</span>
+                                                </div>
+
+                                                <div class="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
+                                                    <div id="unified-bar-fill" class="h-full rounded-full bg-emerald-600 transition-all duration-1000 ease-out"
+                                                        style="width: 0%;"></div>
                                                 </div>
                                             </div>
 
-                                            <!-- Caja 3: Área Ejecutada -->
-                                            <div id="btn-metric-area"
-                                                class="cursor-pointer transition-all duration-200 flex flex-col justify-between gap-1 p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 min-h-[66px]"
-                                                onclick="toggleFisicoMetric('area')">
+                                            <!-- Caja 3: Longitud Ejecutada Cuatrenio -->
+                                            <div id="card-metric-cuatrenio"
+                                                class="flex flex-col justify-between gap-1 p-2.5 rounded-xl border border-slate-100 bg-slate-50 min-h-[66px] transition-all duration-200"
+                                                title="Longitud ejecutada en el cuatrienio 2024–2027">
                                                 <div class="flex items-center justify-between gap-1">
                                                     <span
                                                         class="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1 uppercase tracking-wide">
                                                         <span
-                                                            class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
-                                                        Área Ejecutada
+                                                            class="w-1.5 h-1.5 rounded-full bg-[#0B5640] shrink-0"></span>
+                                                        Long. Cuatrenio
                                                     </span>
-                                                    <span class="text-[9px] text-slate-500 font-semibold truncate">de
-                                                        <span id="tot-are-con-text">0</span></span>
+                                                    <span
+                                                        class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 shrink-0">2024–2027</span>
                                                 </div>
-                                                <h3 class="text-sm font-extrabold text-slate-800 truncate tracking-tight"
-                                                    id="tot-are-eje-text">0 m²</h3>
+                                                <div class="flex items-baseline justify-between gap-1">
+                                                    <h3 class="text-sm font-extrabold text-emerald-900 truncate tracking-tight"
+                                                        id="tot-lon-cuat-text">0.00 km</h3>
+                                                    <span class="text-[9px] text-slate-500 font-semibold truncate">de
+                                                        <span id="tot-lon-cuat-con-text">0.00 km</span></span>
+                                                </div>
                                                 <div class="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
-                                                    <div class="h-full rounded-full bg-slate-400" style="width: 100%;">
+                                                    <div id="tot-lon-cuat-bar"
+                                                        class="h-full rounded-full transition-all duration-1000 ease-out"
+                                                        style="width: 0%; background: linear-gradient(90deg, #0B5640, #10B981);">
                                                     </div>
                                                 </div>
                                             </div>
@@ -4305,17 +4338,17 @@
                         <i class="fa-solid fa-chart-line"></i>
                     </div>
                     <div>
-                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                        <div class="flex items-center gap-2.5 flex-wrap mb-1.5">
                             <span id="modal-ind-badge-tipo"
-                                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                                class="text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                                 Métrica: km
                             </span>
                             <span id="modal-ind-badge-meta"
-                                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                class="text-sm sm:text-base font-black uppercase tracking-wide px-3.5 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-sm">
                                 Meta: 30 km
                             </span>
                             <span id="modal-ind-badge-cumplimiento"
-                                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
+                                class="text-sm sm:text-base font-black uppercase tracking-wide px-3.5 py-1 rounded-full bg-blue-100 text-blue-900 border border-blue-300 shadow-sm">
                                 37.5% Cumplido
                             </span>
                         </div>
@@ -4357,22 +4390,22 @@
                         </div>
                     </div>
 
-                    <!-- KPI 2: Alcance Total Ejecutado -->
+                    <!-- KPI 2: Alcance Contratado -->
                     <div
                         class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
                         <div class="flex items-center justify-between text-slate-400 mb-2">
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Alcance Total
-                                Ejecutado</span>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Alcance
+                                Contratado</span>
                             <div
                                 class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
-                                <i class="fa-solid fa-road"></i>
+                                <i class="fa-solid fa-file-signature"></i>
                             </div>
                         </div>
                         <div>
                             <div id="modal-ind-kpi-alcance-total" class="text-xl font-black text-emerald-700">0.00 km
                             </div>
                             <div id="modal-ind-kpi-alcance-m" class="text-[10.5px] text-slate-400 font-medium">0 m
-                                ejecutados en total</div>
+                                contratados</div>
                         </div>
                     </div>
 
@@ -4414,9 +4447,34 @@
                     </div>
                 </div>
 
-                <!-- Barra de Búsqueda y Filtros de la Tabla -->
+                <!-- Barra de Filtros del Indicador (Vigencia, Indicador, Clasificación) -->
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm relative z-20">
+                    <div class="flex items-center justify-between mb-2.5 pb-2 border-b border-slate-100">
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0"></span>
+                            <span class="text-[10px] font-bold text-slate-700 uppercase tracking-wide">Filtros de Análisis</span>
+                            <span id="modal-ind-active-filters-badge" class="hidden text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">0 activos</span>
+                        </div>
+                        <button type="button" id="btn-modal-ind-reset-filters"
+                            class="text-[10.5px] font-bold text-slate-400 hover:text-emerald-700 transition-colors flex items-center gap-1 cursor-pointer">
+                            <i class="fa-solid fa-eraser"></i> Limpiar Filtros
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Vigencia</label>
+                            <select id="modal-filter-vigencia" class="filter-control text-xs" multiple></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Clasificación</label>
+                            <select id="modal-filter-clasificacion" class="filter-control text-xs" multiple></select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de Búsqueda y Acciones de la Tabla -->
                 <div
-                    class="bg-white p-3.5 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+                    class="bg-white p-3.5 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm relative z-10">
                     <div class="relative w-full sm:w-80">
                         <i
                             class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
@@ -4429,9 +4487,10 @@
                             Mostrando 0 convenios
                         </span>
                         <button type="button" id="btn-modal-ind-export-pdf"
-                            class="px-3 py-1.5 bg-institutional-primary hover:bg-institutional-light text-white font-bold rounded-lg text-xs transition-all flex items-center gap-1.5 shadow-sm">
-                            <i class="fa-solid fa-file-pdf"></i>
-                            Exportar Reporte
+                            class="px-3.5 py-1.5 bg-institutional-primary hover:bg-institutional-light text-white font-bold rounded-lg text-xs transition-all flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer"
+                            title="Imprimir informe en PDF con resumen cuatrienal y listado">
+                            <i class="fa-solid fa-file-pdf text-sm"></i>
+                            Imprimir Informe PDF
                         </button>
                     </div>
                 </div>
@@ -5029,8 +5088,8 @@
         </div>
     </div>
 
-    <script src="diat_service.js?v=2.3.0"></script>
-    <script src="script.js?v=2.3.0"></script>
+    <script src="diat_service.js?v=2.3.6"></script>
+    <script src="script.js?v=2.3.6"></script>
 
     <!-- Script adicional para las nuevas funcionalidades de UI -->
     <script>

@@ -10418,13 +10418,13 @@ window.exportIndicadorReportPDF = async function () {
             { text: fmtWithUnit(sumContratado), bold: true, alignment: 'right', fillColor: '#E2E8F0', fontSize: 8.5 }
         ]);
 
-        // Construir Espacio 2: Tabla Ejecutado (Vigencias 2024-2027 con discriminación de heredados)
+        // Construir Espacio 2: Tabla Ejecutado (Anualidades 2024-2027 con discriminación de cuatrienio y heredados)
         const tableEjecucionBody = [];
         tableEjecucionBody.push([
-            { text: 'VIGENCIA', style: 'tableHeader', alignment: 'center', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 7.5 },
-            { text: 'EJECUTADO', style: 'tableHeader', alignment: 'right', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 7.5 },
-            { text: 'HEREDADO', style: 'tableHeader', alignment: 'right', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 7.5 },
-            { text: 'EJECUTADO +\nHEREDADOS', style: 'tableHeader', alignment: 'right', fillColor: '#B45309', color: '#FFFFFF', bold: true, fontSize: 7.5 }
+            { text: 'AÑO', style: 'tableHeader', alignment: 'center', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 7.5 },
+            { text: 'EJECUTADO\nCUATRIENIO', style: 'tableHeader', alignment: 'right', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 7.5 },
+            { text: 'EJECUTADO\nHEREDADO', style: 'tableHeader', alignment: 'right', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 7.5 },
+            { text: 'TOTAL\nEJECUTADO', style: 'tableHeader', alignment: 'right', fillColor: '#B45309', color: '#FFFFFF', bold: true, fontSize: 7.5 }
         ]);
 
         cuatrenioYears.forEach(y => {

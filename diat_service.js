@@ -343,6 +343,41 @@ class DIATDataService {
                     mergedRow['AREA EJECUTADA (M2)'] = parseFloat(changes[id]['AREA EJECUTADA (m2)']) || 0;
                 }
 
+                // Mapear campos anuales con nombres alternativos
+                ['2024', '2025', '2026', '2027'].forEach(y => {
+                    const lKeys = [`LONGITUD EJECUTADA ${y}(m)`, `LONGITUD EJECUTADA ${y} (m)`, `LONGITUD EJECUTADA ${y}`, `LONGITUD EJECTUADA ${y}(m)`, `LONGITUD EJECTUADA ${y}`];
+                    for (let lk of lKeys) {
+                        if (changes[id][lk] !== undefined) {
+                            mergedRow[`LONGITUD EJECUTADA ${y}`] = parseFloat(changes[id][lk]) || 0;
+                            break;
+                        }
+                    }
+                    const aKeys = [`AREA EJECUTADA ${y} (m2)`, `AREA EJECUTADA ${y}(m2)`, `AREA EJECUTADA ${y}`, `ÁREA EJECUTADA ${y} (m2)`, `ÁREA EJECUTADA ${y}`];
+                    for (let ak of aKeys) {
+                        if (changes[id][ak] !== undefined) {
+                            mergedRow[`AREA EJECUTADA ${y}`] = parseFloat(changes[id][ak]) || 0;
+                            break;
+                        }
+                    }
+                });
+
+                // Auto-sumar cuatrienio si hay valores anuales
+                const sumLongY = (parseFloat(mergedRow['LONGITUD EJECUTADA 2024']) || 0) +
+                                 (parseFloat(mergedRow['LONGITUD EJECUTADA 2025']) || 0) +
+                                 (parseFloat(mergedRow['LONGITUD EJECUTADA 2026']) || 0) +
+                                 (parseFloat(mergedRow['LONGITUD EJECUTADA 2027']) || 0);
+                if (sumLongY > 0) {
+                    mergedRow['LONGITUD EJECUTADA CUATRENIO'] = sumLongY;
+                }
+
+                const sumAreaY = (parseFloat(mergedRow['AREA EJECUTADA 2024']) || 0) +
+                                (parseFloat(mergedRow['AREA EJECUTADA 2025']) || 0) +
+                                (parseFloat(mergedRow['AREA EJECUTADA 2026']) || 0) +
+                                (parseFloat(mergedRow['AREA EJECUTADA 2027']) || 0);
+                if (sumAreaY > 0) {
+                    mergedRow['AREA EJECUTADA CUATRENIO (M2)'] = sumAreaY;
+                }
+
                 // Recalcular avances físicos y financieros para que el frontend los muestre actualizados
                 const v = parseInt(mergedRow['VIGENCIA'], 10);
                 const isAnterior = !isNaN(v) && v < 2024;

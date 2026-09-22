@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Annual Columns</title>
+    <!-- Chart.js dummy -->
+    <script>
+        window.Chart = function() { return { update: function(){}, destroy: function(){} }; };
+        window.L = { map: function() { return {}; } };
+    </script>
+    <script src="diat_service.js"></script>
+    <script src="script.js"></script>
+</head>
+<body>
+    <pre id="output"></pre>
+    <script>
+        const results = [];
+        function assert(cond, msg) {
+            results.push({ status: cond ? 'PASS' : 'FAIL', msg: msg });
+        }
+
+        try {
+            // Test 1: Convenio con distribución anual de longitud (595 en 2025, 105 en 2026)
+            const conv1 = {
+                'CONVENIO': 'TEST-01',
+                'VIGENCIA': '2024',
+                'INDICADOR': 'VÍAS TERCIARIAS (RVT)',
+                'LONGITUD EJECUTADA 2024': 0,
+                'LONGITUD EJECUTADA 2025': 595,
+                'LONGITUD EJECUTADA 2026': 105,
+                'LONGITUD EJECUTADA 2027': 0,
+                'LONGITUD EJECUTADA CUATRENIO': 700,
+                'LONGITUD EJECUTADA': 700,
+                'AREA EJECUTADA 2025': 2500,
+                'AREA EJECUTADA 2026': 500,
+                'AREA EJECUTADA CUATRENIO (M2)': 3000
+            };
+
+            assert(getRowLongitudEjecutadaAnio(conv1, '2024') === 0, 'conv1 Longitud 2024 is 0');
+            assert(getRowLongitudEjecutadaAnio(conv1, '2025') === 595, 'conv1 Longitud 2025 is 595m');
+            assert(getRowLongitudEjecutadaAnio(conv1, '2026') === 105, 'conv1 Longitud 2026 is 105m');
+            assert(getRowLongitudEjecutadaAnio(conv1, '2027') === 0, 'conv1 Longitud 2027 is 0');
+            assert(getRowLongitudEjecutadaCuatrenio(conv1) === 700, 'conv1 Longitud Cuatrenio is 700m (595+105)');
+            assert(getRowLongitudEjecutada(conv1) === 700, 'conv1 getRowLongitudEjecutada is 700m');
+
+            assert(getRowAreaEjecutadaAnio(conv1, '2025') === 2500, 'conv1 Area 2025 is 2500m2');
+            assert(getRowAreaEjecutadaCuatrenio(conv1) === 3000, 'conv1 Area Cuatrenio is 3000m2 (2500+500)');
+            assert(getRowAreaEjecutada(conv1) === 3000, 'conv1 getRowAreaEjecutada is 3000m2');
+
+            // Test 2: Convenio Heredado con ejecución en 2024
+            const convHeredado = {
+                'CONVENIO': 'HEREDADO-01',
+                'VIGENCIA': '2022',
+                'INDICADOR': 'VÍAS TERCIARIAS (RVT)',
+                'LONGITUD EJECUTADA 2024': 450,
+                'LONGITUD EJECUTADA 2025': 0,
+                'LONGITUD EJECUTADA 2026': 0,
+                'LONGITUD EJECUTADA 2027': 0,
+                'LONGITUD EJECUTADA CUATRENIO': 450,
+                'LONGITUD EJECUTADA': 2000
+            };
+
+            assert(isCuatrenioAnterior(convHeredado) === true, 'convHeredado is recognized as Heredado');
+            assert(getRowLongitudEjecutadaAnio(convHeredado, '2024') === 450, 'convHeredado executed in 2024 is 450m');
+            assert(getRowLongitudEjecutadaAnio(convHeredado, '2025') === 0, 'convHeredado executed in 2025 is 0');
+            assert(getRowLongitudEjecutadaCuatrenio(convHeredado) === 450, 'convHeredado Cuatrenio execution is 450m');
+
+            // Test 3: Convenio sin discriminar columnas aún (columnas en 0, pero con total cuatrienio registrado)
+            const convPending = {
+                'CONVENIO': 'PENDING-01',
+                'VIGENCIA': '2024',
+                'LONGITUD EJECUTADA 2024': 0,
+                'LONGITUD EJECUTADA 2025': 0,
+                'LONGITUD EJECUTADA 2026': 0,
+                'LONGITUD EJECUTADA 2027': 0,
+                'LONGITUD EJECUTADA CUATRENIO': 1200,
+                'LONGITUD EJECUTADA': 1200,
+                'AREA EJECUTADA CUATRENIO (M2)': 5000
+            };
+            assert(getRowLongitudEjecutadaCuatrenio(convPending) === 1200, 'convPending preserves 1200m cuatrenio total when annuals are 0');
+            assert(getRowAreaEjecutadaCuatrenio(convPending) === 5000, 'convPending preserves 5000m2 cuatrenio total when annuals are 0');
+            assert(getRowLongitudEjecutadaPlan(convPending, '2024') === 1200, 'convPending Plan 2024 preserves 1200m via fallback');
+            assert(getRowLongitudEjecutadaPlan(convPending, '2025') === 0, 'convPending Plan 2025 returns 0m');
+
+            // Test 4: DIATDataService mergeData con columnas anuales y auto-suma
+            localStorage.removeItem('diat_convenio_changes');
+            const localChanges = {
+                'MERGE-TEST': {
+                    'LONGITUD EJECUTADA 2025(m)': 600,
+                    'LONGITUD EJECUTADA 2026(m)': 200,
+                    'AREA EJECUTADA 2025 (m2)': 1500,
+                    'AREA EJECUTADA 2026 (m2)': 300
+                }
+            };
+            localStorage.setItem('diat_convenio_changes', JSON.stringify(localChanges));
+            const baseRow = [{
+                'CONVENIO': 'MERGE-TEST',
+                'VIGENCIA': '2025',
+                'ALCANCE (m)': 1000,
+                'LONGITUD EJECUTADA': 0,
+                'LONGITUD EJECUTADA CUATRENIO': 0
+            }];
+            const merged = window.DIATDataService.mergeData(baseRow);
+            assert(merged[0]['LONGITUD EJECUTADA 2025'] === 600, 'mergeData maps LONGITUD EJECUTADA 2025(m) to 600');
+            assert(merged[0]['LONGITUD EJECUTADA 2026'] === 200, 'mergeData maps LONGITUD EJECUTADA 2026(m) to 200');
+            assert(merged[0]['LONGITUD EJECUTADA CUATRENIO'] === 800, 'mergeData auto-sums cuatrienio to 800m');
+            assert(merged[0]['AREA EJECUTADA CUATRENIO (M2)'] === 1800, 'mergeData auto-sums area cuatrienio to 1800m2');
+
+            // Test 5: Regla de Contratado (Vigencia) vs Ejecutado (Columnas anuales)
+            const rowsTest = [
+                { 'CONVENIO': 'C1', 'VIGENCIA': '2024', 'ALCANCE (m)': 500, 'LONGITUD EJECUTADA 2024': 100, 'LONGITUD EJECUTADA 2025': 400 },
+                { 'CONVENIO': 'C2', 'VIGENCIA': '2025', 'ALCANCE (m)': 1200, 'LONGITUD EJECUTADA 2024': 0, 'LONGITUD EJECUTADA 2025': 600 },
+                { 'CONVENIO': 'H1', 'VIGENCIA': '2021', 'ALCANCE (m)': 2000, 'LONGITUD EJECUTADA 2024': 300, 'LONGITUD EJECUTADA 2025': 0 } // Heredado
+            ];
+
+            // Para contratado en 2024: solo C1 (vigencia 2024 y no heredado)
+            let contratado2024 = 0;
+            let contratado2025 = 0;
+            let ejecutado2024 = 0;
+            let ejecutado2025 = 0;
+
+            rowsTest.forEach(r => {
+                const isH = isCuatrenioAnterior(r);
+                if (!isH && r['VIGENCIA'] === '2024') contratado2024 += r['ALCANCE (m)'];
+                if (!isH && r['VIGENCIA'] === '2025') contratado2025 += r['ALCANCE (m)'];
+                ejecutado2024 += getRowLongitudEjecutadaAnio(r, '2024');
+                ejecutado2025 += getRowLongitudEjecutadaAnio(r, '2025');
+            });
+
+            assert(contratado2024 === 500, 'Contratado 2024 only counts Vigencia 2024: 500m');
+            assert(contratado2025 === 1200, 'Contratado 2025 only counts Vigencia 2025: 1200m');
+            assert(ejecutado2024 === 400, 'Ejecutado 2024 sums column 2024 across actuals and heredados (100 + 300 = 400m)');
+            assert(ejecutado2025 === 1000, 'Ejecutado 2025 sums column 2025 (400 + 600 = 1000m)');
+
+        } catch (err) {
+            results.push({ status: 'FAIL', msg: 'Exception: ' + err.message });
+        }
+
+        document.getElementById('output').textContent = JSON.stringify(results, null, 2);
+    </script>
+</body>
+</html>

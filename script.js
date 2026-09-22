@@ -124,11 +124,25 @@ const isCuatrenioAnterior = (row) => {
 
 const getRowLongitudEjecutada = (row) => {
     if (!row) return 0;
+    const sumYears = (parseNum(row['LONGITUD EJECUTADA 2024']) || 0) +
+                     (parseNum(row['LONGITUD EJECUTADA 2025']) || 0) +
+                     (parseNum(row['LONGITUD EJECUTADA 2026']) || 0) +
+                     (parseNum(row['LONGITUD EJECUTADA 2027']) || 0);
+    if (sumYears > 0) return sumYears;
+    const lc = parseNum(row['LONGITUD EJECUTADA CUATRENIO']) || 0;
+    if (lc > 0) return lc;
     return parseNum(row['LONGITUD EJECUTADA']);
 };
 
 const getRowAreaEjecutada = (row) => {
     if (!row) return 0;
+    const sumYears = (parseNum(row['AREA EJECUTADA 2024']) || 0) +
+                     (parseNum(row['AREA EJECUTADA 2025']) || 0) +
+                     (parseNum(row['AREA EJECUTADA 2026']) || 0) +
+                     (parseNum(row['AREA EJECUTADA 2027']) || 0);
+    if (sumYears > 0) return sumYears;
+    const ac = parseNum(row['AREA EJECUTADA CUATRENIO (M2)']) || 0;
+    if (ac > 0) return ac;
     return parseNum(row['AREA EJECUTADA (M2)']);
 };
 
@@ -143,7 +157,7 @@ const getRowAreaContratada = (row) => {
 };
 
 // Funciones específicas para la pestaña Indicadores (Plan de Desarrollo 2024-2027)
-// Excluyen cuatrienios anteriores (< 2024) para la medición de cumplimiento del Plan de Desarrollo
+// Excluyen cuatrienios anteriores (< 2024) para la medición de contratación del Plan de Desarrollo
 const getRowLongitudContratadaPlan = (row) => {
     if (!row || isCuatrenioAnterior(row)) return 0;
     return parseNum(row['ALCANCE (M)']) || parseNum(row['LONGITUD CONTRATADA']);
@@ -154,16 +168,29 @@ const getRowAreaContratadaPlan = (row) => {
     return parseNum(row['ALCANCE (M2)']) || parseNum(row['AREA CONTRATADA']) || parseNum(row['ÁREA CONTRATADA']);
 };
 
-const getRowLongitudEjecutadaPlan = (row) => {
+// Obtiene la longitud ejecutada en un año específico (2024, 2025, 2026, 2027)
+const getRowLongitudEjecutadaAnio = (row, year) => {
     if (!row) return 0;
-    if (isCuatrenioAnterior(row)) {
-        return parseNum(row['LONGITUD EJECUTADA CUATRENIO']);
-    }
-    return parseNum(row['LONGITUD EJECUTADA']);
+    const y = String(year).trim();
+    return parseNum(row['LONGITUD EJECUTADA ' + y]) || 0;
 };
 
+// Obtiene el área ejecutada en un año específico (2024, 2025, 2026, 2027)
+const getRowAreaEjecutadaAnio = (row, year) => {
+    if (!row) return 0;
+    const y = String(year).trim();
+    return parseNum(row['AREA EJECUTADA ' + y]) || 0;
+};
+
+// Longitud Ejecutada Cuatrienio: suma de las 4 columnas (2024..2027); si están en 0, preserva el valor registrado
 const getRowLongitudEjecutadaCuatrenio = (row) => {
     if (!row) return 0;
+    const sumYears = (parseNum(row['LONGITUD EJECUTADA 2024']) || 0) +
+                     (parseNum(row['LONGITUD EJECUTADA 2025']) || 0) +
+                     (parseNum(row['LONGITUD EJECUTADA 2026']) || 0) +
+                     (parseNum(row['LONGITUD EJECUTADA 2027']) || 0);
+    if (sumYears > 0) return sumYears;
+
     if (isCuatrenioAnterior(row)) {
         return parseNum(row['LONGITUD EJECUTADA CUATRENIO']) || 0;
     }
@@ -171,12 +198,128 @@ const getRowLongitudEjecutadaCuatrenio = (row) => {
     return lc > 0 ? lc : (parseNum(row['LONGITUD EJECUTADA']) || 0);
 };
 
-const getRowAreaEjecutadaPlan = (row) => {
+// Área Ejecutada Cuatrienio: suma de las 4 columnas (2024..2027); si están en 0, preserva el valor registrado
+const getRowAreaEjecutadaCuatrenio = (row) => {
     if (!row) return 0;
+    const sumYears = (parseNum(row['AREA EJECUTADA 2024']) || 0) +
+                     (parseNum(row['AREA EJECUTADA 2025']) || 0) +
+                     (parseNum(row['AREA EJECUTADA 2026']) || 0) +
+                     (parseNum(row['AREA EJECUTADA 2027']) || 0);
+    if (sumYears > 0) return sumYears;
+
     if (isCuatrenioAnterior(row)) {
-        return parseNum(row['AREA EJECUTADA CUATRENIO (M2)']);
+        return parseNum(row['AREA EJECUTADA CUATRENIO (M2)']) || 0;
     }
-    return parseNum(row['AREA EJECUTADA (M2)']);
+    const ac = parseNum(row['AREA EJECUTADA CUATRENIO (M2)']) || 0;
+    return ac > 0 ? ac : (parseNum(row['AREA EJECUTADA (M2)']) || 0);
+};
+
+// Obtiene el año estimado o real de culminación de las obras del convenio
+function getRowCompletionYear(row) {
+    if (!row) return '2024';
+    const cuatrenioYears = ['2024', '2025', '2026', '2027'];
+    let termStr = row['NUEVA FECHA DE TERMINACION'] || row['NUEVA FECHA DE TERMINACIÓN'] || row['NUEVA FECHA DE TERMINACIN']
+        || row['FECHA DE TERMINACION'] || row['FECHA DE TERMINACIÓN'] || row['FECHA DE TERMINACIN']
+        || row['FECHA DE TERMINACION DEL CONVENIO'];
+
+    if (termStr && String(termStr).trim() !== '' && String(termStr).trim().toLowerCase() !== 'sin cambios') {
+        const str = String(termStr).trim();
+        const num = parseFloat(str);
+        if (!isNaN(num) && num > 30000 && num < 60000) {
+            const date = new Date(Math.round((num - 25569) * 86400 * 1000));
+            const y = String(date.getUTCFullYear());
+            if (cuatrenioYears.includes(y)) return y;
+            if (parseInt(y, 10) < 2024) return '2024';
+            return '2027';
+        }
+
+        const ddmmyyyy = str.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+        if (ddmmyyyy && ddmmyyyy[3]) {
+            const y = ddmmyyyy[3];
+            if (cuatrenioYears.includes(y)) return y;
+            if (parseInt(y, 10) < 2024) return '2024';
+            return '2027';
+        }
+
+        const yyyymmdd = str.match(/^(\d{4})[\/\-]/);
+        if (yyyymmdd && yyyymmdd[1]) {
+            const y = yyyymmdd[1];
+            if (cuatrenioYears.includes(y)) return y;
+            if (parseInt(y, 10) < 2024) return '2024';
+            return '2027';
+        }
+
+        const dateVal = new Date(str);
+        if (!isNaN(dateVal.getTime())) {
+            const y = String(dateVal.getFullYear());
+            if (cuatrenioYears.includes(y)) return y;
+            if (parseInt(y, 10) < 2024) return '2024';
+            return '2027';
+        }
+    }
+
+    const vigencia = String(row['VIGENCIA'] || '').replace('.0', '').trim();
+    if (cuatrenioYears.includes(vigencia)) {
+        return vigencia;
+    }
+    return '2024';
+}
+
+// Determina el año objetivo de imputación para convenios cuyas 4 columnas anuales aún no están discriminadas
+const getRowFallbackYear = (row) => {
+    if (!row) return '2024';
+    const cuatrenioYears = ['2024', '2025', '2026', '2027'];
+    const isHeredado = isCuatrenioAnterior(row);
+    const compYear = getRowCompletionYear(row);
+    const vigStr = String(row['VIGENCIA'] || '').replace('.0', '').trim();
+
+    if (isHeredado) {
+        return (compYear && cuatrenioYears.includes(compYear)) ? compYear : '2024';
+    } else {
+        if (cuatrenioYears.includes(vigStr)) return vigStr;
+        if (compYear && cuatrenioYears.includes(compYear)) return compYear;
+        return '2024';
+    }
+};
+
+const getRowLongitudEjecutadaPlan = (row, yearFilter = 'todos') => {
+    if (!row) return 0;
+    if (yearFilter && yearFilter !== 'todos') {
+        const sumYears = (parseNum(row['LONGITUD EJECUTADA 2024']) || 0) +
+                         (parseNum(row['LONGITUD EJECUTADA 2025']) || 0) +
+                         (parseNum(row['LONGITUD EJECUTADA 2026']) || 0) +
+                         (parseNum(row['LONGITUD EJECUTADA 2027']) || 0);
+        if (sumYears > 0) {
+            return getRowLongitudEjecutadaAnio(row, yearFilter);
+        }
+        // Fallback: si no tiene distribución en las 4 columnas, conservar la ejecución asignada a su año por defecto
+        const fallbackY = getRowFallbackYear(row);
+        if (String(yearFilter).trim() === String(fallbackY).trim()) {
+            return getRowLongitudEjecutadaCuatrenio(row);
+        }
+        return 0;
+    }
+    return getRowLongitudEjecutadaCuatrenio(row);
+};
+
+const getRowAreaEjecutadaPlan = (row, yearFilter = 'todos') => {
+    if (!row) return 0;
+    if (yearFilter && yearFilter !== 'todos') {
+        const sumYears = (parseNum(row['AREA EJECUTADA 2024']) || 0) +
+                         (parseNum(row['AREA EJECUTADA 2025']) || 0) +
+                         (parseNum(row['AREA EJECUTADA 2026']) || 0) +
+                         (parseNum(row['AREA EJECUTADA 2027']) || 0);
+        if (sumYears > 0) {
+            return getRowAreaEjecutadaAnio(row, yearFilter);
+        }
+        // Fallback: si no tiene distribución en las 4 columnas, conservar la ejecución asignada a su año por defecto
+        const fallbackY = getRowFallbackYear(row);
+        if (String(yearFilter).trim() === String(fallbackY).trim()) {
+            return getRowAreaEjecutadaCuatrenio(row);
+        }
+        return 0;
+    }
+    return getRowAreaEjecutadaCuatrenio(row);
 };
 
 const parseExcelDate = (excelNum) => {
@@ -2033,39 +2176,50 @@ function calculateProyeccionAnualPct(indicadorFilter) {
         if (!ind || !indicadoresEstrategicos[ind]) return;
 
         const cfg = indicadoresEstrategicos[ind];
-        let cant = 0;
+        const isHeredado = isCuatrenioAnterior(row);
+        const vigStr = String(row['VIGENCIA'] || '').replace('.0', '').trim();
 
-        if (cfg.tipo === 'km') {
-            const metros = planMetric === 'contratado' ? getRowLongitudContratadaPlan(row) : getRowLongitudEjecutadaPlan(row);
-            cant = metros / 1000;
-        } else if (cfg.tipo === 'm2') {
-            cant = planMetric === 'contratado' ? getRowAreaContratadaPlan(row) : getRowAreaEjecutadaPlan(row);
-        } else {
+        years.forEach(y => {
+            let cantY = 0;
             if (planMetric === 'contratado') {
-                cant = isCuatrenioAnterior(row) ? 0 : 1;
+                if (!isHeredado && vigStr === y) {
+                    if (cfg.tipo === 'km') {
+                        cantY = (parseNum(row['ALCANCE (m)']) || parseNum(row['ALCANCE (M)']) || parseNum(row['LONGITUD TOTAL']) || parseNum(row['LONGITUD CONTRATADA']) || 0) / 1000;
+                    } else if (cfg.tipo === 'm2') {
+                        cantY = parseNum(row['ALCANCE (M2)']) || parseNum(row['ALCANCE (m2)']) || parseNum(row['AREA CONTRATADA (M2)']) || 0;
+                    } else {
+                        cantY = 1;
+                    }
+                }
             } else {
-                const estado = String(row['ESTADO CONVENIO'] || '').toUpperCase();
-                const tieneEjecucion = estado.includes('EJECUCI') || estado.includes('EJECUT') ||
-                    estado.includes('OPERA') || estado.includes('MEJORAD') ||
-                    getRowLongitudEjecutadaPlan(row) > 0 ||
-                    getRowAreaEjecutadaPlan(row) > 0 ||
-                    parseNum(row['FISICO_NORM']) > 0;
-                cant = tieneEjecucion ? 1 : 0;
+                if (cfg.tipo === 'km') {
+                    cantY = getRowLongitudEjecutadaPlan(row, y) / 1000;
+                } else if (cfg.tipo === 'm2') {
+                    cantY = getRowAreaEjecutadaPlan(row, y);
+                } else {
+                    const compYear = getRowCompletionYear(row);
+                    if (compYear === y) {
+                        const estado = String(row['ESTADO CONVENIO'] || '').toUpperCase();
+                        const tieneEjecucion = estado.includes('EJECUCI') || estado.includes('EJECUT') ||
+                            estado.includes('OPERA') || estado.includes('MEJORAD') ||
+                            parseNum(row['FISICO_NORM']) > 0;
+                        cantY = tieneEjecucion ? 1 : 0;
+                    }
+                }
             }
-        }
 
-        const compYear = getRowCompletionYear(row);
-        if (compYear && acumCantByYear[compYear] !== undefined) {
-            if (indicadorFilter === 'todos-km') {
-                if (cfg.tipo === 'km') acumCantByYear[compYear] += cant;
-            } else if (indicadorFilter === 'todos-m2') {
-                if (cfg.tipo === 'm2') acumCantByYear[compYear] += cant;
-            } else if (indicadorFilter === 'todos') {
-                acumCantByYear[compYear] += cant;
-            } else {
-                if (ind === indicadorFilter) acumCantByYear[compYear] += cant;
+            if (cantY > 0) {
+                if (indicadorFilter === 'todos-km') {
+                    if (cfg.tipo === 'km') acumCantByYear[y] += cantY;
+                } else if (indicadorFilter === 'todos-m2') {
+                    if (cfg.tipo === 'm2') acumCantByYear[y] += cantY;
+                } else if (indicadorFilter === 'todos') {
+                    acumCantByYear[y] += cantY;
+                } else {
+                    if (ind === indicadorFilter) acumCantByYear[y] += cantY;
+                }
             }
-        }
+        });
     });
 
     let targetTotal = 0;
@@ -2241,36 +2395,45 @@ async function generatePlanPDF() {
         let sumCumplimiento = 0;
         let countCumplimiento = 0;
 
+        const cuatrenioYears = ['2024', '2025', '2026', '2027'];
+
         rawData.forEach(row => {
             const ind = normalizarIndicador(row['INDICADOR']);
             if (!ind || !dataInd[ind]) return;
 
             const cfg = indicadoresEstrategicos[ind];
+            const isHeredado = isCuatrenioAnterior(row);
+            const vigStr = String(row['VIGENCIA'] || '').replace('.0', '').trim();
             let cant = 0;
 
-            if (cfg.tipo === 'km') {
-                const metros = planMetric === 'contratado' ? getRowLongitudContratadaPlan(row) : getRowLongitudEjecutadaPlan(row);
-                cant = metros / 1000;
-            } else if (cfg.tipo === 'm2') {
-                cant = planMetric === 'contratado' ? getRowAreaContratadaPlan(row) : getRowAreaEjecutadaPlan(row);
-            } else {
-                if (planMetric === 'contratado') {
-                    cant = isCuatrenioAnterior(row) ? 0 : 1;
+            if (planMetric === 'contratado') {
+                if (planYearFilter === 'todos') {
+                    if (isHeredado || !cuatrenioYears.includes(vigStr)) return;
                 } else {
-                    const estado = String(row['ESTADO CONVENIO'] || '').toUpperCase();
-                    const tieneEjecucion = estado.includes('EJECUCI') || estado.includes('EJECUT') ||
-                        estado.includes('OPERA') || estado.includes('MEJORAD') ||
-                        getRowLongitudEjecutadaPlan(row) > 0 ||
-                        getRowAreaEjecutadaPlan(row) > 0 ||
-                        parseNum(row['FISICO_NORM']) > 0;
-                    cant = tieneEjecucion ? 1 : 0;
+                    if (isHeredado || vigStr !== planYearFilter) return;
+                }
+                if (cfg.tipo === 'km') {
+                    cant = (parseNum(row['ALCANCE (m)']) || parseNum(row['ALCANCE (M)']) || parseNum(row['LONGITUD TOTAL']) || parseNum(row['LONGITUD CONTRATADA']) || 0) / 1000;
+                } else if (cfg.tipo === 'm2') {
+                    cant = parseNum(row['ALCANCE (M2)']) || parseNum(row['ALCANCE (m2)']) || parseNum(row['AREA CONTRATADA (M2)']) || 0;
+                } else {
+                    cant = 1;
+                }
+            } else {
+                if (cfg.tipo === 'km') {
+                    cant = getRowLongitudEjecutadaPlan(row, planYearFilter) / 1000;
+                } else if (cfg.tipo === 'm2') {
+                    cant = getRowAreaEjecutadaPlan(row, planYearFilter);
+                } else {
+                    const compYear = getRowCompletionYear(row);
+                    if (planYearFilter === 'todos' || compYear === planYearFilter) {
+                        const fis = parseNum(row['FISICO_NORM']) || 0;
+                        cant = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
+                    }
                 }
             }
 
-            const compYear = getRowCompletionYear(row);
-            if (planYearFilter !== 'todos' && compYear !== planYearFilter) {
-                return;
-            }
+            if (cant <= 0) return;
 
             dataInd[ind].ejecutado += cant;
             dataInd[ind].convenios++;
@@ -4724,6 +4887,24 @@ function processExcelData(data) {
             muniVal = cleanMojibake(muniVal);
         }
 
+        var le2024 = parseNum(c('LONGITUD EJECUTADA 2024(m)', 'LONGITUD EJECUTADA 2024 (m)', 'LONGITUD EJECUTADA 2024 (M)', 'LONGITUD EJECUTADA 2024', 'LONGITUD EJECTUADA 2024(m)', 'LONGITUD EJECTUADA 2024 (m)', 'LONGITUD EJECTUADA 2024'));
+        var le2025 = parseNum(c('LONGITUD EJECUTADA 2025(m)', 'LONGITUD EJECUTADA 2025 (m)', 'LONGITUD EJECUTADA 2025 (M)', 'LONGITUD EJECUTADA 2025', 'LONGITUD EJECTUADA 2025(m)', 'LONGITUD EJECTUADA 2025 (m)', 'LONGITUD EJECTUADA 2025'));
+        var le2026 = parseNum(c('LONGITUD EJECUTADA 2026(m)', 'LONGITUD EJECUTADA 2026 (m)', 'LONGITUD EJECUTADA 2026 (M)', 'LONGITUD EJECUTADA 2026', 'LONGITUD EJECTUADA 2026(m)', 'LONGITUD EJECTUADA 2026 (m)', 'LONGITUD EJECTUADA 2026'));
+        var le2027 = parseNum(c('LONGITUD EJECUTADA 2027(m)', 'LONGITUD EJECUTADA 2027 (m)', 'LONGITUD EJECUTADA 2027 (M)', 'LONGITUD EJECUTADA 2027', 'LONGITUD EJECTUADA 2027(m)', 'LONGITUD EJECTUADA 2027 (m)', 'LONGITUD EJECTUADA 2027'));
+
+        var ae2024 = parseNum(c('AREA EJECUTADA 2024 (m2)', 'AREA EJECUTADA 2024(m2)', 'AREA EJECUTADA 2024 (M2)', 'AREA EJECUTADA 2024', 'ÁREA EJECUTADA 2024 (m2)', 'ÁREA EJECUTADA 2024(m2)', 'ÁREA EJECUTADA 2024'));
+        var ae2025 = parseNum(c('AREA EJECUTADA 2025 (m2)', 'AREA EJECUTADA 2025(m2)', 'AREA EJECUTADA 2025 (M2)', 'AREA EJECUTADA 2025', 'ÁREA EJECUTADA 2025 (m2)', 'ÁREA EJECUTADA 2025(m2)', 'ÁREA EJECUTADA 2025'));
+        var ae2026 = parseNum(c('AREA EJECUTADA 2026 (m2)', 'AREA EJECUTADA 2026(m2)', 'AREA EJECUTADA 2026 (M2)', 'AREA EJECUTADA 2026', 'ÁREA EJECUTADA 2026 (m2)', 'ÁREA EJECUTADA 2026(m2)', 'ÁREA EJECUTADA 2026'));
+        var ae2027 = parseNum(c('AREA EJECUTADA 2027 (m2)', 'AREA EJECUTADA 2027(m2)', 'AREA EJECUTADA 2027 (M2)', 'AREA EJECUTADA 2027', 'ÁREA EJECUTADA 2027 (m2)', 'ÁREA EJECUTADA 2027(m2)', 'ÁREA EJECUTADA 2027'));
+
+        var sumLongCuat = le2024 + le2025 + le2026 + le2027;
+        var lcFromSheet = parseNum(c('LONGITUD EJECUTADA CUATRENIO(m)', 'LONGITUD EJECUTADA CUATRENIO (m)', 'LONGITUD EJECUTADA CUATRENIO (M)', 'LONGITUD EJECUTADA CUATRENIO'));
+        var valLongCuat = sumLongCuat > 0 ? sumLongCuat : lcFromSheet;
+
+        var sumAreaCuat = ae2024 + ae2025 + ae2026 + ae2027;
+        var acFromSheet = parseNum(c('AREA EJECUTADA CUATRENIO (m2)', 'AREA EJECUTADA CUATRENIO (M2)', 'AREA EJECUTADA CUATRENIO', 'ÁREA EJECUTADA CUATRENIO (m2)', 'ÁREA EJECUTADA CUATRENIO (M2)', 'ÁREA EJECUTADA CUATRENIO'));
+        var valAreaCuat = sumAreaCuat > 0 ? sumAreaCuat : acFromSheet;
+
         return Object.assign({}, row, {
             'MUNICIPIO': String(muniVal || row['MUNICIPIO'] || '').trim().toUpperCase(),
             'VIGENCIA': String(c('VIGENCIA') || '').trim() || 'Sin Ano',
@@ -4742,8 +4923,16 @@ function processExcelData(data) {
             'ALCANCE (M2)': parseNum(c('ALCANCE (M2)', 'ALCANCE (m2)')),
             'LONGITUD EJECUTADA': parseNum(c('LONGITUD EJECUTADA (m)', 'LONGITUD EJECUTADA (M)', 'LONGITUD EJECUTADA')),
             'AREA EJECUTADA (M2)': parseNum(c('AREA EJECUTADA (M2)', 'AREA EJECUTADA (m2)', 'AREA EJECUTADA')),
-            'LONGITUD EJECUTADA CUATRENIO': parseNum(c('LONGITUD EJECUTADA CUATRENIO(m)', 'LONGITUD EJECUTADA CUATRENIO (m)', 'LONGITUD EJECUTADA CUATRENIO (M)', 'LONGITUD EJECUTADA CUATRENIO')),
-            'AREA EJECUTADA CUATRENIO (M2)': parseNum(c('AREA EJECUTADA CUATRENIO (m2)', 'AREA EJECUTADA CUATRENIO (M2)', 'AREA EJECUTADA CUATRENIO')),
+            'LONGITUD EJECUTADA 2024': le2024,
+            'LONGITUD EJECUTADA 2025': le2025,
+            'LONGITUD EJECUTADA 2026': le2026,
+            'LONGITUD EJECUTADA 2027': le2027,
+            'AREA EJECUTADA 2024': ae2024,
+            'AREA EJECUTADA 2025': ae2025,
+            'AREA EJECUTADA 2026': ae2026,
+            'AREA EJECUTADA 2027': ae2027,
+            'LONGITUD EJECUTADA CUATRENIO': valLongCuat,
+            'AREA EJECUTADA CUATRENIO (M2)': valAreaCuat,
             'CONVENIANTE EJECUTOR': c('CONVENIANTE EJECUTOR', 'EJECUTOR'),
             'SUBREGION': String(c('SUBREGION', 'SUBREGIÓN', 'SUB REGIÓN') || '').trim().toUpperCase(),
             'CLASIFICACION': String(c('CLASIFICACION', 'CLASIFICACIÓN', 'CLASIFICACIN') || '').trim().toUpperCase(),
@@ -6978,10 +7167,31 @@ function openModal(row) {
     document.getElementById('mod-via').textContent = row['VIA_PRIORIZADA'];
     const modAlcM = getRowLongitudContratada(row);
     const modAlcM2 = getRowAreaContratada(row);
-    const modEjM = getRowLongitudEjecutada(row);
-    const modEjM2 = getRowAreaEjecutada(row);
+    const modEjM = getRowLongitudEjecutadaCuatrenio(row);
+    const modEjM2 = getRowAreaEjecutadaCuatrenio(row);
     document.getElementById('mod-alcance').textContent = `${formatNumber(modAlcM)} m / ${formatNumber(modAlcM2)} m²`;
-    document.getElementById('mod-ejecutado-areas').textContent = `${formatNumber(modEjM)} m / ${formatNumber(modEjM2)} m²`;
+
+    let annualPills = [];
+    ['2024', '2025', '2026', '2027'].forEach(y => {
+        const ly = parseNum(row['LONGITUD EJECUTADA ' + y]) || 0;
+        const ay = parseNum(row['AREA EJECUTADA ' + y]) || 0;
+        if (ly > 0 || ay > 0) {
+            let parts = [];
+            if (ly > 0) parts.push(`${formatNumber(Math.round(ly))}m`);
+            if (ay > 0) parts.push(`${formatNumber(Math.round(ay))}m²`);
+            annualPills.push(`'${y.slice(2)}: ${parts.join(' / ')}`);
+        }
+    });
+
+    const elEjecutadoAreas = document.getElementById('mod-ejecutado-areas');
+    if (elEjecutadoAreas) {
+        let baseText = `${formatNumber(modEjM)} m / ${formatNumber(modEjM2)} m²`;
+        if (annualPills.length > 0) {
+            elEjecutadoAreas.innerHTML = `<div>${baseText}</div><div style="font-size:10px;color:#78350F;font-weight:600;margin-top:2px;" title="Desglose de ejecución por año">${annualPills.join(' · ')}</div>`;
+        } else {
+            elEjecutadoAreas.textContent = baseText;
+        }
+    }
 
     document.getElementById('mod-valor-total').textContent = formatCurrency(row['VALOR TOTAL']);
     document.getElementById('mod-aporte-depto').textContent = formatCurrency(row['APORTE DEPARTAMENTO']);
@@ -9060,40 +9270,6 @@ window.setPlanAnualMetric = function (val) {
     }
 };
 
-function getRowCompletionYear(row) {
-    let termStr = row['NUEVA FECHA DE TERMINACION'] || row['NUEVA FECHA DE TERMINACIÓN'] || row['NUEVA FECHA DE TERMINACIN'];
-    if (!termStr || String(termStr).trim() === '' || String(termStr).trim().toLowerCase() === 'sin cambios') {
-        termStr = row['FECHA DE TERMINACION'] || row['FECHA DE TERMINACIÓN'] || row['FECHA DE TERMINACIN'];
-    }
-    if (termStr) {
-        termStr = String(termStr).trim();
-        if (!isNaN(termStr) && termStr !== '') {
-            const serialNum = parseFloat(termStr);
-            if (serialNum > 30000) {
-                const dateVal = new Date((serialNum - 25569) * 86400 * 1000);
-                if (!isNaN(dateVal.getTime())) {
-                    return String(dateVal.getFullYear());
-                }
-            }
-        }
-        const parts = termStr.split('/');
-        if (parts.length === 3) {
-            const yearStr = parts[2].trim();
-            if (yearStr.length === 4 && !isNaN(yearStr)) {
-                return yearStr;
-            }
-        }
-        const dateVal = new Date(termStr);
-        if (!isNaN(dateVal.getTime())) {
-            return String(dateVal.getFullYear());
-        }
-    }
-    const vigencia = String(row['VIGENCIA'] || '').trim();
-    if (vigencia && !isNaN(vigencia)) {
-        return vigencia;
-    }
-    return null;
-}
 
 window.setPlanYearFilter = function (val) {
     planYearFilter = val;
@@ -9139,45 +9315,82 @@ function renderPlanTab() {
         if (!ind || !dataInd[ind]) return;
 
         const cfg = indicadoresEstrategicos[ind];
-        let cant = 0;
+        const cuatrenioYears = ['2024', '2025', '2026', '2027'];
+        const isHeredado = isCuatrenioAnterior(row);
+        const vigStr = String(row['VIGENCIA'] || '').replace('.0', '').trim();
 
-        if (cfg.tipo === 'km') {
-            const metros = planMetric === 'contratado' ? getRowLongitudContratadaPlan(row) : getRowLongitudEjecutadaPlan(row);
-            cant = metros / 1000;
-        } else if (cfg.tipo === 'm2') {
-            cant = planMetric === 'contratado' ? getRowAreaContratadaPlan(row) : getRowAreaEjecutadaPlan(row);
-        } else {
+        // 1. Acumulación anual para el gráfico (Metas por año: contratado según vigencia, ejecutado según las 4 columnas anuales)
+        cuatrenioYears.forEach(y => {
+            let cantY = 0;
             if (planMetric === 'contratado') {
-                cant = isCuatrenioAnterior(row) ? 0 : 1;
+                if (!isHeredado && vigStr === y) {
+                    if (cfg.tipo === 'km') {
+                        cantY = (parseNum(row['ALCANCE (m)']) || parseNum(row['ALCANCE (M)']) || parseNum(row['LONGITUD TOTAL']) || parseNum(row['LONGITUD CONTRATADA']) || 0) / 1000;
+                    } else if (cfg.tipo === 'm2') {
+                        cantY = parseNum(row['ALCANCE (M2)']) || parseNum(row['ALCANCE (m2)']) || parseNum(row['AREA CONTRATADA (M2)']) || 0;
+                    } else {
+                        cantY = 1;
+                    }
+                }
             } else {
-                const estado = String(row['ESTADO CONVENIO'] || '').toUpperCase();
-                const tieneEjecucion = estado.includes('EJECUCI') || estado.includes('EJECUT') ||
-                    estado.includes('OPERA') || estado.includes('MEJORAD') ||
-                    getRowLongitudEjecutadaPlan(row) > 0 ||
-                    getRowAreaEjecutadaPlan(row) > 0 ||
-                    parseNum(row['FISICO_NORM']) > 0;
-                cant = tieneEjecucion ? 1 : 0;
+                if (cfg.tipo === 'km') {
+                    cantY = getRowLongitudEjecutadaPlan(row, y) / 1000;
+                } else if (cfg.tipo === 'm2') {
+                    cantY = getRowAreaEjecutadaPlan(row, y);
+                } else {
+                    const compYear = getRowCompletionYear(row);
+                    if (compYear === y) {
+                        const estado = String(row['ESTADO CONVENIO'] || '').toUpperCase();
+                        const tieneEjecucion = estado.includes('EJECUCI') || estado.includes('EJECUT') ||
+                            estado.includes('OPERA') || estado.includes('MEJORAD') ||
+                            parseNum(row['FISICO_NORM']) > 0;
+                        cantY = tieneEjecucion ? 1 : 0;
+                    }
+                }
+            }
+
+            if (cantY > 0) {
+                if (planAnualFilter === 'todos-km') {
+                    if (cfg.tipo === 'km') avancePorAnio[y] += cantY;
+                } else if (planAnualFilter === 'todos-m2') {
+                    if (cfg.tipo === 'm2') avancePorAnio[y] += cantY;
+                } else {
+                    if (ind === planAnualFilter) avancePorAnio[y] += cantY;
+                }
+            }
+        });
+
+        // 2. Filtro de año para KPIs y Tarjetas del Plan de Desarrollo
+        let cantPlan = 0;
+        if (planMetric === 'contratado') {
+            if (planYearFilter === 'todos') {
+                if (!isHeredado && cuatrenioYears.includes(vigStr)) {
+                    cantPlan = (cfg.tipo === 'km') ? getRowLongitudContratadaPlan(row) / 1000 : (cfg.tipo === 'm2' ? getRowAreaContratadaPlan(row) : 1);
+                }
+            } else {
+                if (!isHeredado && vigStr === planYearFilter) {
+                    cantPlan = (cfg.tipo === 'km') ? getRowLongitudContratadaPlan(row) / 1000 : (cfg.tipo === 'm2' ? getRowAreaContratadaPlan(row) : 1);
+                }
+            }
+        } else {
+            if (cfg.tipo === 'km') {
+                cantPlan = getRowLongitudEjecutadaPlan(row, planYearFilter) / 1000;
+            } else if (cfg.tipo === 'm2') {
+                cantPlan = getRowAreaEjecutadaPlan(row, planYearFilter);
+            } else {
+                const compYear = getRowCompletionYear(row);
+                if (planYearFilter === 'todos' || compYear === planYearFilter) {
+                    const fis = parseNum(row['FISICO_NORM']) || 0;
+                    cantPlan = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
+                }
             }
         }
 
-        // 1. Acumulación anual para el gráfico (basado en la fecha de finalización real, para todo el universo de datos)
-        const compYear = getRowCompletionYear(row);
-        if (compYear && avancePorAnio[compYear] !== undefined) {
-            if (planAnualFilter === 'todos-km') {
-                if (cfg.tipo === 'km') avancePorAnio[compYear] += cant;
-            } else if (planAnualFilter === 'todos-m2') {
-                if (cfg.tipo === 'm2') avancePorAnio[compYear] += cant;
-            } else {
-                if (ind === planAnualFilter) avancePorAnio[compYear] += cant;
-            }
-        }
-
-        // 2. Filtro de año de finalización real para las KPIs y Tarjetas
-        if (planYearFilter !== 'todos' && compYear !== planYearFilter) {
+        if (cantPlan <= 0) {
             return;
         }
 
-        dataInd[ind].ejecutado += cant;
+        dataInd[ind].ejecutado += cantPlan;
         dataInd[ind].convenios++;
 
         inversionTotal += parseNum(row['APORTE DEPARTAMENTO']) + parseNum(row['ADICION DEPARTAMENTO']);
@@ -9655,13 +9868,23 @@ window.openIndicadorDetailModal = function (indKey) {
 
             if (cfg.tipo === 'km') {
                 const le = parseNum(row['LONGITUD EJECUTADA']) || 0;
-                let lc = parseNum(row['LONGITUD EJECUTADA CUATRENIO']) || 0;
-                if (!isCuatrenioAnterior(row) && lc === 0 && le > 0) lc = le;
+                let lc = getRowLongitudEjecutadaCuatrenio(row);
 
                 valRowTotal = le / 1000;
                 valRowCuatrenio = lc / 1000;
                 sumFiltroTotal += valRowTotal;
                 sumFiltroCuatrenio += valRowCuatrenio;
+
+                const y24 = parseNum(row['LONGITUD EJECUTADA 2024']) || 0;
+                const y25 = parseNum(row['LONGITUD EJECUTADA 2025']) || 0;
+                const y26 = parseNum(row['LONGITUD EJECUTADA 2026']) || 0;
+                const y27 = parseNum(row['LONGITUD EJECUTADA 2027']) || 0;
+                let annualBadges = [];
+                if (y24 > 0) annualBadges.push(`'24: ${formatNumber(Math.round(y24))}m`);
+                if (y25 > 0) annualBadges.push(`'25: ${formatNumber(Math.round(y25))}m`);
+                if (y26 > 0) annualBadges.push(`'26: ${formatNumber(Math.round(y26))}m`);
+                if (y27 > 0) annualBadges.push(`'27: ${formatNumber(Math.round(y27))}m`);
+                const annualStr = annualBadges.length > 0 ? `<div class="text-[9px] text-amber-700 font-mono mt-0.5 whitespace-nowrap" title="Desglose por año">${annualBadges.join(' · ')}</div>` : '';
 
                 rowAlcanceTotalStr = `
                     <div class="font-bold text-slate-900">${valRowTotal.toFixed(2)} km</div>
@@ -9670,19 +9893,33 @@ window.openIndicadorDetailModal = function (indKey) {
                 rowAlcanceCuatrenioStr = `
                     <div class="font-black text-amber-900">${valRowCuatrenio.toFixed(2)} km</div>
                     <div class="text-[10px] text-amber-700">${formatNumber(Math.round(lc))} m</div>
+                    ${annualStr}
                 `;
             } else if (cfg.tipo === 'm2') {
                 const ae = parseNum(row['AREA EJECUTADA (M2)']) || 0;
-                let ac = parseNum(row['AREA EJECUTADA CUATRENIO (M2)']) || 0;
-                if (!isCuatrenioAnterior(row) && ac === 0 && ae > 0) ac = ae;
+                let ac = getRowAreaEjecutadaCuatrenio(row);
 
                 valRowTotal = ae;
                 valRowCuatrenio = ac;
                 sumFiltroTotal += valRowTotal;
                 sumFiltroCuatrenio += valRowCuatrenio;
 
+                const a24 = parseNum(row['AREA EJECUTADA 2024']) || 0;
+                const a25 = parseNum(row['AREA EJECUTADA 2025']) || 0;
+                const a26 = parseNum(row['AREA EJECUTADA 2026']) || 0;
+                const a27 = parseNum(row['AREA EJECUTADA 2027']) || 0;
+                let annualBadges = [];
+                if (a24 > 0) annualBadges.push(`'24: ${formatNumber(Math.round(a24))}m²`);
+                if (a25 > 0) annualBadges.push(`'25: ${formatNumber(Math.round(a25))}m²`);
+                if (a26 > 0) annualBadges.push(`'26: ${formatNumber(Math.round(a26))}m²`);
+                if (a27 > 0) annualBadges.push(`'27: ${formatNumber(Math.round(a27))}m²`);
+                const annualStr = annualBadges.length > 0 ? `<div class="text-[9px] text-amber-700 font-mono mt-0.5 whitespace-nowrap" title="Desglose por año">${annualBadges.join(' · ')}</div>` : '';
+
                 rowAlcanceTotalStr = `<div class="font-bold text-slate-900">${formatNumber(Math.round(ae))} m²</div>`;
-                rowAlcanceCuatrenioStr = `<div class="font-black text-amber-900">${formatNumber(Math.round(ac))} m²</div>`;
+                rowAlcanceCuatrenioStr = `
+                    <div class="font-black text-amber-900">${formatNumber(Math.round(ac))} m²</div>
+                    ${annualStr}
+                `;
             } else {
                 const fis = parseNum(row['FISICO_NORM']) || 0;
                 valRowTotal = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
@@ -9871,19 +10108,11 @@ window.openIndicadorDetailModal = function (indKey) {
                 totalUndContratada += 1;
             }
 
-            // Aporte Cuatrienio
-            const le = parseNum(row['LONGITUD EJECUTADA']) || 0;
-            let lc = parseNum(row['LONGITUD EJECUTADA CUATRENIO']) || 0;
-            if (!isHeredado && lc === 0 && le > 0) {
-                lc = le;
-            }
+            // Aporte Cuatrienio (calculado desde la suma de los 4 años o preservado)
+            const lc = getRowLongitudEjecutadaCuatrenio(row);
             totalLongitudCuatrenioM += lc;
 
-            const ae = parseNum(row['AREA EJECUTADA (M2)']) || 0;
-            let ac = parseNum(row['AREA EJECUTADA CUATRENIO (M2)']) || 0;
-            if (!isHeredado && ac === 0 && ae > 0) {
-                ac = ae;
-            }
+            const ac = getRowAreaEjecutadaCuatrenio(row);
             totalAreaCuatrenioM2 += ac;
 
             const fis = parseNum(row['FISICO_NORM']) || 0;
@@ -10101,54 +10330,44 @@ window.exportIndicadorReportPDF = async function () {
             const isHeredado = isCuatrenioAnterior(row);
             const vigStr = String(row['VIGENCIA'] || '').replace('.0', '').trim();
 
-            let valContratado = 0;
-            let valEjecutadoCuat = 0;
-
-            if (cfg.tipo === 'km') {
-                const alcM = parseNum(row['ALCANCE (m)']) || parseNum(row['ALCANCE (M)']) || parseNum(row['LONGITUD TOTAL']) || parseNum(row['LONGITUD CONTRATADA']) || 0;
-                valContratado = alcM / 1000;
-
-                const le = parseNum(row['LONGITUD EJECUTADA']) || 0;
-                let lc = parseNum(row['LONGITUD EJECUTADA CUATRENIO']) || 0;
-                if (!isHeredado && lc === 0 && le > 0) lc = le;
-
-                valEjecutadoCuat = (lc > 0 ? lc : (isHeredado ? 0 : le)) / 1000;
-            } else if (cfg.tipo === 'm2') {
-                const alcM2 = parseNum(row['ALCANCE (M2)']) || parseNum(row['ALCANCE (m2)']) || parseNum(row['AREA CONTRATADA (M2)']) || 0;
-                valContratado = alcM2;
-
-                const ae = parseNum(row['AREA EJECUTADA (M2)']) || 0;
-                let ac = parseNum(row['AREA EJECUTADA CUATRENIO (M2)']) || 0;
-                if (!isHeredado && ac === 0 && ae > 0) ac = ae;
-
-                valEjecutadoCuat = ac > 0 ? ac : (isHeredado ? 0 : ae);
-            } else {
-                valContratado = 1;
-                const fis = parseNum(row['FISICO_NORM']) || 0;
-                const und = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
-                valEjecutadoCuat = und;
-            }
-
-            // Asignación a Contratado (estrictamente convenios contratados en el cuatrienio 2024-2027)
+            // 1. Asignación a Contratado (estrictamente convenios contratados en el cuatrienio 2024-2027 según vigencia)
             if (!isHeredado && cuatrenioYears.includes(vigStr)) {
+                let valContratado = 0;
+                if (cfg.tipo === 'km') {
+                    const alcM = parseNum(row['ALCANCE (m)']) || parseNum(row['ALCANCE (M)']) || parseNum(row['LONGITUD TOTAL']) || parseNum(row['LONGITUD CONTRATADA']) || 0;
+                    valContratado = alcM / 1000;
+                } else if (cfg.tipo === 'm2') {
+                    const alcM2 = parseNum(row['ALCANCE (M2)']) || parseNum(row['ALCANCE (m2)']) || parseNum(row['AREA CONTRATADA (M2)']) || 0;
+                    valContratado = alcM2;
+                } else {
+                    valContratado = 1;
+                }
                 contratadoData[vigStr] += valContratado;
             }
 
-            // Asignación a Ejecutado
-            if (isHeredado) {
-                // Convenios heredados ejecutados en el cuatrienio discriminados por año
-                const compYear = getRowCompletionYear(row);
-                if (cuatrenioYears.includes(compYear)) {
-                    ejecutadoHeredadoData[compYear] += valEjecutadoCuat;
+            // 2. Asignación a Ejecutado (según las 4 columnas anuales 2024..2027, con fallback al año correspondiente para filas pendientes)
+            cuatrenioYears.forEach(y => {
+                let valY = 0;
+                if (cfg.tipo === 'km') {
+                    valY = getRowLongitudEjecutadaPlan(row, y) / 1000;
+                } else if (cfg.tipo === 'm2') {
+                    valY = getRowAreaEjecutadaPlan(row, y);
                 } else {
-                    ejecutadoHeredadoData['2024'] += valEjecutadoCuat;
+                    const compYear = getRowCompletionYear(row);
+                    if (compYear === y) {
+                        const fis = parseNum(row['FISICO_NORM']) || 0;
+                        valY = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
+                    }
                 }
-            } else {
-                // Convenios contratados en la administración actual (2024-2027)
-                if (cuatrenioYears.includes(vigStr)) {
-                    ejecutadoActualData[vigStr] += valEjecutadoCuat;
+
+                if (valY > 0) {
+                    if (isHeredado) {
+                        ejecutadoHeredadoData[y] += valY;
+                    } else {
+                        ejecutadoActualData[y] += valY;
+                    }
                 }
-            }
+            });
         });
 
         // Totales consolidados
@@ -10425,7 +10644,7 @@ window.exportIndicadorReportPDF = async function () {
                             margin: [10, 0, 0, 0],
                             stack: [
                                 { text: 'GOBERNACIÓN DE ANTIOQUIA • SECRETARÍA DE INFRAESTRUCTURA FÍSICA', fontSize: 9.5, bold: true, color: '#0B5640' },
-                                { text: 'DIRECCIÓN DE INFORMACIÓN Y ANALÍTICA TERRITORIAL (DIAT)', fontSize: 8, color: '#475569', margin: [0, 1, 0, 0] },
+                                { text: 'DIRECCIÓN DE INFRAESTRUCTURA Y APOYO TERRITORIAL (DIAT)', fontSize: 8, color: '#475569', margin: [0, 1, 0, 0] },
                                 { text: 'INFORME DE CUMPLIMIENTO DE METAS POR INDICADOR', fontSize: 13, bold: true, color: '#0F172A', margin: [0, 4, 0, 0] }
                             ]
                         },
@@ -12269,16 +12488,58 @@ function initSupervisorPortal() {
                 'OBSERVACIONES': observaciones
             };
 
+            const l24 = parseFloat(document.getElementById('edit-seg-long-2024')?.value) || 0;
+            const l25 = parseFloat(document.getElementById('edit-seg-long-2025')?.value) || 0;
+            const l26 = parseFloat(document.getElementById('edit-seg-long-2026')?.value) || 0;
+            const l27 = parseFloat(document.getElementById('edit-seg-long-2027')?.value) || 0;
+
+            const a24 = parseFloat(document.getElementById('edit-seg-area-2024')?.value) || 0;
+            const a25 = parseFloat(document.getElementById('edit-seg-area-2025')?.value) || 0;
+            const a26 = parseFloat(document.getElementById('edit-seg-area-2026')?.value) || 0;
+            const a27 = parseFloat(document.getElementById('edit-seg-area-2027')?.value) || 0;
+
+            // Guardar discriminación anual en updatedFields para sincronizar con Google Sheets y DIATDataService
+            updatedFields['LONGITUD EJECUTADA 2024(m)'] = l24;
+            updatedFields['LONGITUD EJECUTADA 2025(m)'] = l25;
+            updatedFields['LONGITUD EJECUTADA 2026(m)'] = l26;
+            updatedFields['LONGITUD EJECUTADA 2027(m)'] = l27;
+
+            updatedFields['AREA EJECUTADA 2024 (m2)'] = a24;
+            updatedFields['AREA EJECUTADA 2025 (m2)'] = a25;
+            updatedFields['AREA EJECUTADA 2026 (m2)'] = a26;
+            updatedFields['AREA EJECUTADA 2027 (m2)'] = a27;
+
+            // Actualizar objeto en memoria
+            row['LONGITUD EJECUTADA 2024'] = l24;
+            row['LONGITUD EJECUTADA 2025'] = l25;
+            row['LONGITUD EJECUTADA 2026'] = l26;
+            row['LONGITUD EJECUTADA 2027'] = l27;
+
+            row['AREA EJECUTADA 2024'] = a24;
+            row['AREA EJECUTADA 2025'] = a25;
+            row['AREA EJECUTADA 2026'] = a26;
+            row['AREA EJECUTADA 2027'] = a27;
+
+            const sumLongYears = l24 + l25 + l26 + l27;
+            const sumAreaYears = a24 + a25 + a26 + a27;
+
+            const finalLongitud = sumLongYears > 0 ? sumLongYears : longitud;
+            const finalArea = sumAreaYears > 0 ? sumAreaYears : area;
+
             if (isAnterior) {
-                updatedFields['LONGITUD EJECUTADA CUATRENIO(m)'] = longitud;
-                updatedFields['AREA EJECUTADA CUATRENIO (m2)'] = area;
-                row['LONGITUD EJECUTADA CUATRENIO'] = longitud;
-                row['AREA EJECUTADA CUATRENIO (M2)'] = area;
+                updatedFields['LONGITUD EJECUTADA CUATRENIO(m)'] = finalLongitud;
+                updatedFields['AREA EJECUTADA CUATRENIO (m2)'] = finalArea;
+                row['LONGITUD EJECUTADA CUATRENIO'] = finalLongitud;
+                row['AREA EJECUTADA CUATRENIO (M2)'] = finalArea;
             } else {
-                updatedFields['LONGITUD EJECUTADA (m)'] = longitud;
-                updatedFields['AREA EJECUTADA (m2)'] = area;
-                row['LONGITUD EJECUTADA'] = longitud;
-                row['AREA EJECUTADA (M2)'] = area;
+                updatedFields['LONGITUD EJECUTADA CUATRENIO(m)'] = finalLongitud;
+                updatedFields['LONGITUD EJECUTADA (m)'] = finalLongitud;
+                updatedFields['AREA EJECUTADA CUATRENIO (m2)'] = finalArea;
+                updatedFields['AREA EJECUTADA (m2)'] = finalArea;
+                row['LONGITUD EJECUTADA CUATRENIO'] = finalLongitud;
+                row['LONGITUD EJECUTADA'] = finalLongitud;
+                row['AREA EJECUTADA CUATRENIO (M2)'] = finalArea;
+                row['AREA EJECUTADA (M2)'] = finalArea;
             }
 
             const user = getLoggedUser();
@@ -12402,10 +12663,54 @@ function initSupervisorPortal() {
         document.getElementById('edit-seg-financiero').value = financiero.toFixed(1);
     };
 
+    // Auto-sumar campos anuales a longitud ejecutada cuatrienio
+    const autoSumAnnualLongitud = () => {
+        const l24 = parseFloat(document.getElementById('edit-seg-long-2024')?.value) || 0;
+        const l25 = parseFloat(document.getElementById('edit-seg-long-2025')?.value) || 0;
+        const l26 = parseFloat(document.getElementById('edit-seg-long-2026')?.value) || 0;
+        const l27 = parseFloat(document.getElementById('edit-seg-long-2027')?.value) || 0;
+        const sum = l24 + l25 + l26 + l27;
+        const anyFilled = ['2024', '2025', '2026', '2027'].some(y => {
+            const v = document.getElementById('edit-seg-long-' + y)?.value;
+            return v !== undefined && v !== null && String(v).trim() !== '';
+        });
+        if (anyFilled) {
+            document.getElementById('edit-seg-longitud').value = sum;
+        }
+        updateCalculatedFisico();
+    };
+
+    // Auto-sumar campos anuales a área ejecutada cuatrienio
+    const autoSumAnnualArea = () => {
+        const a24 = parseFloat(document.getElementById('edit-seg-area-2024')?.value) || 0;
+        const a25 = parseFloat(document.getElementById('edit-seg-area-2025')?.value) || 0;
+        const a26 = parseFloat(document.getElementById('edit-seg-area-2026')?.value) || 0;
+        const a27 = parseFloat(document.getElementById('edit-seg-area-2027')?.value) || 0;
+        const sum = a24 + a25 + a26 + a27;
+        const anyFilled = ['2024', '2025', '2026', '2027'].some(y => {
+            const v = document.getElementById('edit-seg-area-' + y)?.value;
+            return v !== undefined && v !== null && String(v).trim() !== '';
+        });
+        if (anyFilled) {
+            document.getElementById('edit-seg-area').value = sum;
+        }
+        updateCalculatedFisico();
+    };
+
     // Registrar los escuchas para recalcular automáticamente
     ['edit-seg-longitud', 'edit-seg-area'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', updateCalculatedFisico);
+    });
+
+    ['edit-seg-long-2024', 'edit-seg-long-2025', 'edit-seg-long-2026', 'edit-seg-long-2027'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', autoSumAnnualLongitud);
+    });
+
+    ['edit-seg-area-2024', 'edit-seg-area-2025', 'edit-seg-area-2026', 'edit-seg-area-2027'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', autoSumAnnualArea);
     });
 
     ['edit-seg-desembolsado', 'edit-seg-autorizado'].forEach(id => {
@@ -13692,6 +13997,20 @@ window.openEditConvenioModal = function (convenioId) {
     document.getElementById('edit-seg-financiero').value = (row['FINANCIERO_NORM'] || 0).toFixed(1);
     document.getElementById('edit-seg-longitud').value = getRowLongitudEjecutada(row);
     document.getElementById('edit-seg-area').value = getRowAreaEjecutada(row);
+
+    ['2024', '2025', '2026', '2027'].forEach(y => {
+        const longEl = document.getElementById('edit-seg-long-' + y);
+        if (longEl) {
+            const val = row['LONGITUD EJECUTADA ' + y];
+            longEl.value = (val !== undefined && val !== null && val !== '') ? val : '';
+        }
+        const areaEl = document.getElementById('edit-seg-area-' + y);
+        if (areaEl) {
+            const val = row['AREA EJECUTADA ' + y];
+            areaEl.value = (val !== undefined && val !== null && val !== '') ? val : '';
+        }
+    });
+
     document.getElementById('edit-seg-desembolsado').value = row['VALOR TOTAL DESEMBOLSADO'] || 0;
     document.getElementById('edit-seg-autorizado').value = row['VALOR TOTAL AUTORIZADO DEPARTAMENTO'] || 0;
 
@@ -16741,30 +17060,45 @@ const DiatAI = {
             let cantEjecutada = 0;
             let cantContratada = 0;
 
+            const isHeredado = typeof isCuatrenioAnterior === 'function' ? isCuatrenioAnterior(row) : false;
+            const vigStr = String(row['VIGENCIA'] || '').replace('.0', '').trim();
+            const cuatrenioYears = ['2024', '2025', '2026', '2027'];
+
             if (cfg.tipo === 'km') {
-                const metrosEje = typeof getRowLongitudEjecutadaPlan === 'function' ? getRowLongitudEjecutadaPlan(row) : (getRowLongitudEjecutada(row) || 0);
-                const metrosCon = typeof getRowLongitudContratadaPlan === 'function' ? getRowLongitudContratadaPlan(row) : (getRowLongitudContratada(row) || 0);
-                cantEjecutada = metrosEje / 1000;
-                cantContratada = metrosCon / 1000;
+                cantContratada = typeof getRowLongitudContratadaPlan === 'function' ? (getRowLongitudContratadaPlan(row) / 1000) : 0;
+                cantEjecutada = typeof getRowLongitudEjecutadaCuatrenio === 'function' ? (getRowLongitudEjecutadaCuatrenio(row) / 1000) : 0;
             } else if (cfg.tipo === 'm2') {
-                cantEjecutada = typeof getRowAreaEjecutadaPlan === 'function' ? getRowAreaEjecutadaPlan(row) : (parseNum(row['AREA EJECUTADA']) || 0);
-                cantContratada = typeof getRowAreaContratadaPlan === 'function' ? getRowAreaContratadaPlan(row) : (parseNum(row['AREA CONTRATADA']) || 0);
+                cantContratada = typeof getRowAreaContratadaPlan === 'function' ? getRowAreaContratadaPlan(row) : 0;
+                cantEjecutada = typeof getRowAreaEjecutadaCuatrenio === 'function' ? getRowAreaEjecutadaCuatrenio(row) : 0;
             } else {
-                cantContratada = (typeof isCuatrenioAnterior === 'function' && isCuatrenioAnterior(row)) ? 0 : 1;
-                const estado = String(row['ESTADO CONVENIO'] || '').toUpperCase();
-                const tieneEjecucion = estado.includes('EJECUCI') || estado.includes('EJECUT') ||
-                    estado.includes('OPERA') || estado.includes('MEJORAD') ||
-                    (typeof getRowLongitudEjecutadaPlan === 'function' ? getRowLongitudEjecutadaPlan(row) : 0) > 0 ||
-                    (typeof getRowAreaEjecutadaPlan === 'function' ? getRowAreaEjecutadaPlan(row) : 0) > 0 ||
-                    parseNum(row['FISICO_NORM']) > 0;
-                cantEjecutada = tieneEjecucion ? 1 : 0;
+                cantContratada = isHeredado ? 0 : 1;
+                const fis = parseNum(row['FISICO_NORM']) || 0;
+                cantEjecutada = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
             }
 
-            const compYear = typeof getRowCompletionYear === 'function' ? getRowCompletionYear(row) : null;
-            if (compYear && indStats[ind].ejecutadoByYear[compYear] !== undefined) {
-                indStats[ind].ejecutadoByYear[compYear] += cantEjecutada;
-                indStats[ind].contratadoByYear[compYear] += cantContratada;
+            // Asignación anual a contratado según vigencia
+            if (!isHeredado && indStats[ind].contratadoByYear[vigStr] !== undefined) {
+                indStats[ind].contratadoByYear[vigStr] += cantContratada;
             }
+
+            // Asignación anual a ejecutado según las 4 columnas anuales
+            cuatrenioYears.forEach(y => {
+                let valY = 0;
+                if (cfg.tipo === 'km') {
+                    valY = getRowLongitudEjecutadaPlan(row, y) / 1000;
+                } else if (cfg.tipo === 'm2') {
+                    valY = getRowAreaEjecutadaPlan(row, y);
+                } else {
+                    const compYear = typeof getRowCompletionYear === 'function' ? getRowCompletionYear(row) : null;
+                    if (compYear === y) {
+                        const fis = parseNum(row['FISICO_NORM']) || 0;
+                        valY = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
+                    }
+                }
+                if (valY > 0) {
+                    indStats[ind].ejecutadoByYear[y] += valY;
+                }
+            });
 
             indStats[ind].totalEjecutado += cantEjecutada;
             indStats[ind].totalContratado += cantContratada;

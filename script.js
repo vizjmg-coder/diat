@@ -9798,26 +9798,39 @@ window.openIndicadorDetailModal = function (indKey, initialYear) {
         });
     }
 
-    // 3. Poblar opciones únicas en Vigencia y Clasificación
-    const uniqueVigencias = [...new Set((rawData || []).map(r => String(r['VIGENCIA'] || '').trim()).filter(Boolean))]
+    // 3. Obtener convenios que pertenecen al indicador actual del modal
+    const indicatorRows = (rawData || []).filter(r => {
+        const rInd = String(r['INDICADOR'] || '').trim();
+        const rNorm = typeof normalizarIndicador === 'function' ? normalizarIndicador(rInd) : rInd;
+        return (rInd === indKey || rInd === normalizedKey || (rNorm && (rNorm === normalizedKey || rNorm === indKey)));
+    });
+
+    // Poblar opciones únicas en Vigencia y Clasificación pertenecientes EXCLUSIVAMENTE a este indicador
+    const uniqueVigencias = [...new Set(indicatorRows.map(r => String(r['VIGENCIA'] || '').replace('.0', '').trim()).filter(Boolean))]
         .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
 
-    const uniqueClasificaciones = [...new Set((rawData || []).map(r => String(r['CLASIFICACION'] || r['CLASIFICACIÓN'] || r['CLASIFICACIN'] || '').trim()).filter(Boolean))]
+    const uniqueClasificaciones = [...new Set(indicatorRows.map(r => String(r['CLASIFICACION'] || r['CLASIFICACIÓN'] || r['CLASIFICACIN'] || r['CLASIFICACI"N'] || '').trim()).filter(Boolean))]
         .sort();
 
-    // Poblar Vigencias
+    // Poblar Vigencias exclusivas del indicador
     if (selVigenciaEl) {
         selVigenciaEl.innerHTML = '<option value="">Todas las Vigencias</option>' +
             uniqueVigencias.map(v => `<option value="${v}">${v}</option>`).join('');
+        if (typeof selVigenciaEl.rebuildCustomDropdown === 'function') {
+            selVigenciaEl.rebuildCustomDropdown();
+        }
     }
 
-    // Poblar Clasificaciones
+    // Poblar Clasificaciones exclusivas del indicador
     if (selClasificacionEl) {
         selClasificacionEl.innerHTML = '<option value="">Todas las Clasificaciones</option>' +
             uniqueClasificaciones.map(c => `<option value="${c}">${c}</option>`).join('');
+        if (typeof selClasificacionEl.rebuildCustomDropdown === 'function') {
+            selClasificacionEl.rebuildCustomDropdown();
+        }
     }
 
-    // Inicializar dropdowns customizables si no lo están
+    // Inicializar o refrescar dropdowns customizables
     if (typeof initSearchableDropdown === 'function') {
         initSearchableDropdown('modal-filter-meta-year', 'Todas las Metas (Cuatrienio)...');
         initSearchableDropdown('modal-filter-vigencia', 'Todas las Vigencias...');
@@ -10114,7 +10127,7 @@ window.openIndicadorDetailModal = function (indKey, initialYear) {
 
             // Filtro Clasificación
             if (selClas.length > 0) {
-                const rClas = String(r['CLASIFICACION'] || r['CLASIFICACIÓN'] || r['CLASIFICACIN'] || '').trim();
+                const rClas = String(r['CLASIFICACION'] || r['CLASIFICACIÓN'] || r['CLASIFICACIN'] || r['CLASIFICACI"N'] || '').trim();
                 if (!selClas.includes(rClas)) return false;
             }
 
@@ -14883,8 +14896,13 @@ function initSearchableDropdown(selectId, placeholder = "Seleccionar...") {
     const nativeSelect = document.getElementById(selectId);
     if (!nativeSelect) return;
 
-    // Evitar doble inicialización
-    if (nativeSelect.dataset.customSelectInitialized) return;
+    // Si ya está inicializado, reconstruir opciones y retornar
+    if (nativeSelect.dataset.customSelectInitialized) {
+        if (typeof nativeSelect.rebuildCustomDropdown === 'function') {
+            nativeSelect.rebuildCustomDropdown();
+        }
+        return;
+    }
     nativeSelect.dataset.customSelectInitialized = "true";
 
     // Ocultar select nativo
@@ -15023,6 +15041,9 @@ function initSearchableDropdown(selectId, placeholder = "Seleccionar...") {
 
         updateTriggerText();
     }
+
+    // Exponer función de reconstrucción en el elemento nativo
+    nativeSelect.rebuildCustomDropdown = rebuildOptions;
 
     // Inicializar opciones
     rebuildOptions();

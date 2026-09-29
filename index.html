@@ -4469,7 +4469,7 @@
                     <div
                         class="bg-gradient-to-br from-amber-500/10 to-amber-600/5 p-3.5 rounded-xl border border-amber-300 shadow-sm flex flex-col justify-between">
                         <div class="flex items-center justify-between text-slate-400 mb-2">
-                            <span class="text-[10px] font-black uppercase tracking-wider text-amber-800">Aporte Este
+                            <span id="modal-ind-kpi-cuatrenio-title" class="text-[10px] font-black uppercase tracking-wider text-amber-800">Aporte Este
                                 Cuatrienio</span>
                             <div
                                 class="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center text-xs font-black">
@@ -4503,7 +4503,7 @@
                     </div>
                 </div>
 
-                <!-- Barra de Filtros del Indicador (Vigencia, Indicador, Clasificación) -->
+                <!-- Barra de Filtros del Indicador (Meta/Año, Vigencia, Clasificación) -->
                 <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm relative z-20">
                     <div class="flex items-center justify-between mb-2.5 pb-2 border-b border-slate-100">
                         <div class="flex items-center gap-2">
@@ -4516,7 +4516,17 @@
                             <i class="fa-solid fa-eraser"></i> Limpiar Filtros
                         </button>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Meta / Anualidad</label>
+                            <select id="modal-filter-meta-year" class="filter-control text-xs" multiple>
+                                <option value="todos">Cuatrienio 2024-2027 (Todas)</option>
+                                <option value="2024">Meta 2024</option>
+                                <option value="2025">Meta 2025</option>
+                                <option value="2026">Meta 2026</option>
+                                <option value="2027">Meta 2027</option>
+                            </select>
+                        </div>
                         <div>
                             <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Vigencia</label>
                             <select id="modal-filter-vigencia" class="filter-control text-xs" multiple></select>
@@ -4562,7 +4572,7 @@
                                     <th class="py-2.5 px-3">Municipio / Subregión</th>
                                     <th class="py-2.5 px-3">Clasificación</th>
                                     <th class="py-2.5 px-3 text-center">Estado</th>
-                                    <th
+                                    <th id="modal-th-aporte"
                                         class="py-2.5 px-3 text-right bg-amber-50/60 text-amber-900 border-x border-amber-200/50">
                                         Aporte Cuatrienio</th>
                                     <th class="py-2.5 px-3 text-center">% Físico y Financiero</th>

@@ -9504,7 +9504,7 @@ function renderPlanTab() {
         const restanteText = isNP ? '-' : fmtVal(restante);
 
         container.innerHTML += `
-            <div class="meta-card meta-${pctCls} group" data-indicador="${ind}" onclick="openIndicadorDetailModal('${ind.replace(/'/g, "\\'")}')" title="Haz clic para ver los ${d.convenios} convenios asignados y el desglose de alcance">
+            <div class="meta-card meta-${pctCls} group" data-indicador="${ind}" onclick="openIndicadorDetailModal('${ind.replace(/'/g, "\\'")}', '${planYearFilter}')" title="Haz clic para ver los ${d.convenios} convenios asignados y el desglose de alcance">
                 <div class="meta-card-header">
                     <h4 class="meta-card-title">${ind}</h4>
                     <span class="meta-pct-badge ${pctCls}">${badgeText}</span>
@@ -9589,7 +9589,7 @@ function renderPlanTab() {
                     const idx = elements[0].index;
                     const indKey = Object.keys(indicadoresEstrategicos)[idx];
                     if (indKey && typeof openIndicadorDetailModal === 'function') {
-                        openIndicadorDetailModal(indKey);
+                        openIndicadorDetailModal(indKey, planYearFilter);
                     }
                 }
             },
@@ -9737,21 +9737,25 @@ window.openIndicadorDetailFromSelect = function () {
     const sel = document.getElementById('select-anual-indicador');
     if (!sel) return;
     const val = sel.value;
+    const curYear = (typeof planYearFilter !== 'undefined' && planYearFilter) ? planYearFilter : 'todos';
     if (val && val !== 'todos' && val !== 'todos-km' && val !== 'todos-m2') {
-        openIndicadorDetailModal(val);
+        openIndicadorDetailModal(val, curYear);
     } else {
-        openIndicadorDetailModal('VÍAS TERCIARIAS MEJORADAS. (RVT)');
+        openIndicadorDetailModal('VÍAS TERCIARIAS MEJORADAS. (RVT)', curYear);
     }
 };
 
 /**
- * Abre la ventana modal con el resumen del indicador, filtros multi-selección (Vigencia y Clasificación) y tabla sintética de convenios asignados
+ * Abre la ventana modal con el resumen del indicador, filtros multi-selección (Meta/Año, Vigencia y Clasificación) y tabla sintética de convenios asignados
  */
-window.openIndicadorDetailModal = function (indKey) {
+window.openIndicadorDetailModal = function (indKey, initialYear) {
     if (!indKey) indKey = 'VÍAS TERCIARIAS MEJORADAS. (RVT)';
     const normalizedKey = (typeof normalizarIndicador === 'function' ? normalizarIndicador(indKey) : '') || indKey;
     const initialCfg = (typeof indicadoresEstrategicos !== 'undefined' && (indicadoresEstrategicos[normalizedKey] || indicadoresEstrategicos[indKey]))
         || { unit: 'und', tipo: 'und', metas: { todos: 0 } };
+
+    window.currentModalIndKey = normalizedKey;
+    window.currentModalIndCfg = initialCfg;
 
     // 1. Referencias a elementos del DOM
     const modalEl = document.getElementById('modal-indicador-detalle');
@@ -9773,6 +9777,7 @@ window.openIndicadorDetailModal = function (indKey) {
     const tableBody = document.getElementById('modal-ind-table-body');
     const tableFooter = document.getElementById('modal-ind-table-footer');
 
+    const selMetaYearEl = document.getElementById('modal-filter-meta-year');
     const selVigenciaEl = document.getElementById('modal-filter-vigencia');
     const selClasificacionEl = document.getElementById('modal-filter-clasificacion');
     const badgeActiveFilters = document.getElementById('modal-ind-active-filters-badge');
@@ -9781,7 +9786,19 @@ window.openIndicadorDetailModal = function (indKey) {
 
     if (!modalEl) return;
 
-    // 2. Poblar opciones únicas en los dos filtros del modal (Vigencia y Clasificación)
+    // 2. Preseleccionar la Meta/Anualidad según el filtro activo global o parámetro recibido
+    const activeYearToSet = initialYear || (typeof planYearFilter !== 'undefined' && planYearFilter ? planYearFilter : 'todos');
+    if (selMetaYearEl) {
+        Array.from(selMetaYearEl.options).forEach(opt => {
+            if (activeYearToSet === 'todos' || !activeYearToSet) {
+                opt.selected = (opt.value === 'todos' || opt.value === '');
+            } else {
+                opt.selected = (opt.value === activeYearToSet);
+            }
+        });
+    }
+
+    // 3. Poblar opciones únicas en Vigencia y Clasificación
     const uniqueVigencias = [...new Set((rawData || []).map(r => String(r['VIGENCIA'] || '').trim()).filter(Boolean))]
         .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
 
@@ -9802,15 +9819,17 @@ window.openIndicadorDetailModal = function (indKey) {
 
     // Inicializar dropdowns customizables si no lo están
     if (typeof initSearchableDropdown === 'function') {
+        initSearchableDropdown('modal-filter-meta-year', 'Todas las Metas (Cuatrienio)...');
         initSearchableDropdown('modal-filter-vigencia', 'Todas las Vigencias...');
         initSearchableDropdown('modal-filter-clasificacion', 'Todas las Clasificaciones...');
     }
 
     // Sincronizar hacia los dropdowns visuales
+    if (selMetaYearEl) selMetaYearEl.dispatchEvent(new Event('change', { bubbles: true }));
     if (selVigenciaEl) selVigenciaEl.dispatchEvent(new Event('change', { bubbles: true }));
     if (selClasificacionEl) selClasificacionEl.dispatchEvent(new Event('change', { bubbles: true }));
 
-    // 3. Función de Renderizado de la Tabla Sintética
+    // 4. Función de Renderizado de la Tabla Sintética
     function renderModalTable(filterQuery = '') {
         if (!tableBody) return;
         tableBody.innerHTML = '';
@@ -9847,8 +9866,13 @@ window.openIndicadorDetailModal = function (indKey) {
         }
 
         const cfg = window.currentModalIndCfg || initialCfg;
+        const activeFilters = window.currentModalActiveFilters || {};
+        const metaYears = (activeFilters.metaYears && activeFilters.metaYears.length > 0) ? activeFilters.metaYears : [];
+        const isAllYears = (metaYears.length === 0 || metaYears.includes('todos'));
+        const activeYears = isAllYears ? ['2024', '2025', '2026', '2027'] : metaYears;
+
         let sumFiltroTotal = 0;
-        let sumFiltroCuatrenio = 0;
+        let sumFiltroAporte = 0;
         let sumFiltroInversion = 0;
 
         filtered.forEach(row => {
@@ -9862,18 +9886,25 @@ window.openIndicadorDetailModal = function (indKey) {
             sumFiltroInversion += inv;
 
             let rowAlcanceTotalStr = '';
-            let rowAlcanceCuatrenioStr = '';
+            let rowAlcanceAporteStr = '';
             let valRowTotal = 0;
-            let valRowCuatrenio = 0;
+            let valRowAporte = 0;
 
             if (cfg.tipo === 'km') {
                 const le = parseNum(row['LONGITUD EJECUTADA']) || 0;
-                let lc = getRowLongitudEjecutadaCuatrenio(row);
+                let aporteRowM = 0;
+                if (isAllYears) {
+                    aporteRowM = getRowLongitudEjecutadaCuatrenio(row);
+                } else {
+                    activeYears.forEach(y => {
+                        aporteRowM += getRowLongitudEjecutadaPlan(row, y);
+                    });
+                }
 
                 valRowTotal = le / 1000;
-                valRowCuatrenio = lc / 1000;
+                valRowAporte = aporteRowM / 1000;
                 sumFiltroTotal += valRowTotal;
-                sumFiltroCuatrenio += valRowCuatrenio;
+                sumFiltroAporte += valRowAporte;
 
                 const y24 = parseNum(row['LONGITUD EJECUTADA 2024']) || 0;
                 const y25 = parseNum(row['LONGITUD EJECUTADA 2025']) || 0;
@@ -9890,19 +9921,26 @@ window.openIndicadorDetailModal = function (indKey) {
                     <div class="font-bold text-slate-900">${valRowTotal.toFixed(2)} km</div>
                     <div class="text-[10px] text-slate-400">${formatNumber(Math.round(le))} m</div>
                 `;
-                rowAlcanceCuatrenioStr = `
-                    <div class="font-black text-amber-900">${valRowCuatrenio.toFixed(2)} km</div>
-                    <div class="text-[10px] text-amber-700">${formatNumber(Math.round(lc))} m</div>
+                rowAlcanceAporteStr = `
+                    <div class="font-black text-amber-900">${valRowAporte.toFixed(2)} km</div>
+                    <div class="text-[10px] text-amber-700">${formatNumber(Math.round(aporteRowM))} m</div>
                     ${annualStr}
                 `;
             } else if (cfg.tipo === 'm2') {
                 const ae = parseNum(row['AREA EJECUTADA (M2)']) || 0;
-                let ac = getRowAreaEjecutadaCuatrenio(row);
+                let aporteRowM2 = 0;
+                if (isAllYears) {
+                    aporteRowM2 = getRowAreaEjecutadaCuatrenio(row);
+                } else {
+                    activeYears.forEach(y => {
+                        aporteRowM2 += getRowAreaEjecutadaPlan(row, y);
+                    });
+                }
 
                 valRowTotal = ae;
-                valRowCuatrenio = ac;
+                valRowAporte = aporteRowM2;
                 sumFiltroTotal += valRowTotal;
-                sumFiltroCuatrenio += valRowCuatrenio;
+                sumFiltroAporte += valRowAporte;
 
                 const a24 = parseNum(row['AREA EJECUTADA 2024']) || 0;
                 const a25 = parseNum(row['AREA EJECUTADA 2025']) || 0;
@@ -9916,19 +9954,30 @@ window.openIndicadorDetailModal = function (indKey) {
                 const annualStr = annualBadges.length > 0 ? `<div class="text-[9px] text-amber-700 font-mono mt-0.5 whitespace-nowrap" title="Desglose por año">${annualBadges.join(' · ')}</div>` : '';
 
                 rowAlcanceTotalStr = `<div class="font-bold text-slate-900">${formatNumber(Math.round(ae))} m²</div>`;
-                rowAlcanceCuatrenioStr = `
-                    <div class="font-black text-amber-900">${formatNumber(Math.round(ac))} m²</div>
+                rowAlcanceAporteStr = `
+                    <div class="font-black text-amber-900">${formatNumber(Math.round(aporteRowM2))} m²</div>
                     ${annualStr}
                 `;
             } else {
-                const fis = parseNum(row['FISICO_NORM']) || 0;
-                valRowTotal = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
-                valRowCuatrenio = valRowTotal;
+                let aporteRowUnd = 0;
+                if (isAllYears) {
+                    const fis = parseNum(row['FISICO_NORM']) || 0;
+                    aporteRowUnd = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
+                } else {
+                    const compYear = getRowCompletionYear(row);
+                    if (activeYears.includes(compYear)) {
+                        const fis = parseNum(row['FISICO_NORM']) || 0;
+                        aporteRowUnd = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
+                    }
+                }
+
+                valRowTotal = aporteRowUnd;
+                valRowAporte = aporteRowUnd;
                 sumFiltroTotal += valRowTotal;
-                sumFiltroCuatrenio += valRowCuatrenio;
+                sumFiltroAporte += valRowAporte;
 
                 rowAlcanceTotalStr = `<div class="font-bold text-slate-900">${valRowTotal.toFixed(1)} und</div>`;
-                rowAlcanceCuatrenioStr = `<div class="font-black text-amber-900">${valRowCuatrenio.toFixed(1)} und</div>`;
+                rowAlcanceAporteStr = `<div class="font-black text-amber-900">${valRowAporte.toFixed(1)} und</div>`;
             }
 
             const sysState = getSystemState(row['ESTADO CONVENIO']);
@@ -9960,7 +10009,7 @@ window.openIndicadorDetailModal = function (indKey) {
                     <span class="badge-estado ${sysState.badgeClass} text-[9.5px] py-0.5 px-2 font-bold whitespace-nowrap shadow-xs inline-block">${sysState.label}</span>
                 </td>
                 <td class="py-2.5 px-3 text-right bg-amber-50/40 border-x border-amber-200/40">
-                    ${rowAlcanceCuatrenioStr}
+                    ${rowAlcanceAporteStr}
                 </td>
                 <td class="py-2.5 px-3">
                     <div class="flex flex-col gap-1 min-w-[110px] max-w-[140px] mx-auto">
@@ -9998,8 +10047,8 @@ window.openIndicadorDetailModal = function (indKey) {
 
         // Fila de Totales en el Footer
         if (tableFooter) {
-            const sumTotFmt = cfg.tipo === 'km' ? `${sumFiltroTotal.toFixed(2)} km` : (cfg.tipo === 'm2' ? formatNumber(Math.round(sumFiltroTotal)) + ' m²' : `${sumFiltroTotal.toFixed(1)} und`);
-            const sumCuatFmt = cfg.tipo === 'km' ? `${sumFiltroCuatrenio.toFixed(2)} km` : (cfg.tipo === 'm2' ? formatNumber(Math.round(sumFiltroCuatrenio)) + ' m²' : `${sumFiltroCuatrenio.toFixed(1)} und`);
+            const sumAporteFmt = cfg.tipo === 'km' ? `${sumFiltroAporte.toFixed(2)} km` : (cfg.tipo === 'm2' ? formatNumber(Math.round(sumFiltroAporte)) + ' m²' : `${sumFiltroAporte.toFixed(1)} und`);
+            const aporteFooterLabel = isAllYears ? 'Aporte total al Plan' : `Aporte total a Meta (${activeYears.join(', ')})`;
 
             tableFooter.innerHTML = `
                 <tr>
@@ -10007,25 +10056,37 @@ window.openIndicadorDetailModal = function (indKey) {
                         TOTAL CONSOLIDADO (${filtered.length} Convenios) • Inversión: ${formatCurrency(sumFiltroInversion)}
                     </td>
                     <td class="py-3 px-3 text-right text-amber-900 font-black text-sm bg-amber-100/70 border-x border-amber-300">
-                        ${sumCuatFmt}
+                        ${sumAporteFmt}
                     </td>
                     <td colspan="2" class="py-3 px-3 text-center text-[10px] text-slate-500">
-                        Aporte total al Plan
+                        ${aporteFooterLabel}
                     </td>
                 </tr>
             `;
         }
     }
 
-    // 4. Función Reactiva de Filtrado Multi-Criterio (Vigencia y Clasificación)
+    // 5. Función Reactiva de Filtrado Multi-Criterio (Meta/Año, Vigencia y Clasificación)
     function applyModalFilters() {
+        const selMetaYears = typeof getSelectValues === 'function' ? getSelectValues('modal-filter-meta-year') : [];
         const selVig = typeof getSelectValues === 'function' ? getSelectValues('modal-filter-vigencia') : [];
         const selClas = typeof getSelectValues === 'function' ? getSelectValues('modal-filter-clasificacion') : [];
 
-        window.currentModalActiveFilters = { vigencias: selVig, clasificaciones: selClas, indicador: normalizedKey };
+        const isAllYears = (selMetaYears.length === 0 || selMetaYears.includes('todos'));
+        const activeYears = isAllYears ? ['2024', '2025', '2026', '2027'] : selMetaYears;
 
-        // Contador de filtros activos (Vigencia y Clasificación)
-        const activeCount = (selVig.length > 0 ? 1 : 0) + (selClas.length > 0 ? 1 : 0);
+        window.currentModalActiveFilters = {
+            metaYears: isAllYears ? [] : selMetaYears,
+            vigencias: selVig,
+            clasificaciones: selClas,
+            indicador: normalizedKey,
+            indicadores: [normalizedKey]
+        };
+        window.currentModalIndKey = normalizedKey;
+        window.currentModalIndCfg = initialCfg;
+
+        // Contador de filtros activos (Meta/Año, Vigencia y Clasificación)
+        const activeCount = (isAllYears ? 0 : 1) + (selVig.length > 0 ? 1 : 0) + (selClas.length > 0 ? 1 : 0);
         if (badgeActiveFilters) {
             if (activeCount > 0) {
                 badgeActiveFilters.textContent = `${activeCount} activo${activeCount > 1 ? 's' : ''}`;
@@ -10036,7 +10097,6 @@ window.openIndicadorDetailModal = function (indKey) {
         }
 
         const currentCfg = initialCfg;
-        window.currentModalIndCfg = currentCfg;
 
         // Filtrar rawData: restringido al indicador actual del popup (indKey / normalizedKey)
         const filtered = (rawData || []).filter(r => {
@@ -10048,7 +10108,7 @@ window.openIndicadorDetailModal = function (indKey) {
 
             // Filtro Vigencia
             if (selVig.length > 0) {
-                const rVig = String(r['VIGENCIA'] || '').trim();
+                const rVig = String(r['VIGENCIA'] || '').replace('.0', '').trim();
                 if (!selVig.includes(rVig)) return false;
             }
 
@@ -10056,6 +10116,33 @@ window.openIndicadorDetailModal = function (indKey) {
             if (selClas.length > 0) {
                 const rClas = String(r['CLASIFICACION'] || r['CLASIFICACIÓN'] || r['CLASIFICACIN'] || '').trim();
                 if (!selClas.includes(rClas)) return false;
+            }
+
+            // Filtro por Meta / Anualidad seleccionada (si no es 'todos')
+            if (!isAllYears) {
+                const isHeredado = isCuatrenioAnterior(r);
+                const vigStr = String(r['VIGENCIA'] || '').replace('.0', '').trim();
+
+                let hasEjecucionInSelectedYears = false;
+                if (currentCfg.tipo === 'km') {
+                    const totalKmActive = activeYears.reduce((sum, y) => sum + (getRowLongitudEjecutadaPlan(r, y) / 1000), 0);
+                    if (totalKmActive > 0) hasEjecucionInSelectedYears = true;
+                } else if (currentCfg.tipo === 'm2') {
+                    const totalM2Active = activeYears.reduce((sum, y) => sum + getRowAreaEjecutadaPlan(r, y), 0);
+                    if (totalM2Active > 0) hasEjecucionInSelectedYears = true;
+                } else {
+                    const compYear = getRowCompletionYear(r);
+                    if (activeYears.includes(compYear)) {
+                        const fis = parseNum(r['FISICO_NORM']) || 0;
+                        if (fis > 0) hasEjecucionInSelectedYears = true;
+                    }
+                }
+
+                const isContratadoInSelectedYears = (!isHeredado && activeYears.includes(vigStr));
+
+                if (!hasEjecucionInSelectedYears && !isContratadoInSelectedYears) {
+                    return false;
+                }
             }
 
             return true;
@@ -10073,20 +10160,40 @@ window.openIndicadorDetailModal = function (indKey) {
             badgeTipo.textContent = `Métrica: ${tipoLabel}`;
         }
 
-        // Meta oficial del indicador
-        const metaCuatrienio = currentCfg.metas ? (currentCfg.metas['todos'] || 0) : 0;
-        if (badgeMeta) {
-            const metaFmt = currentCfg.tipo === 'km' ? `${metaCuatrienio} km` : (currentCfg.tipo === 'm2' ? formatNumber(metaCuatrienio) + ' m²' : `${metaCuatrienio} und`);
-            badgeMeta.textContent = `Meta Oficial: ${metaFmt}`;
+        // Meta oficial según el período seleccionado
+        let metaPeriodoVal = 0;
+        let metaPeriodoLabel = '';
+        let periodoLabel = '';
+
+        if (isAllYears) {
+            metaPeriodoVal = currentCfg.metas ? (currentCfg.metas['todos'] || 0) : 0;
+            const metaFmt = currentCfg.tipo === 'km' ? `${metaPeriodoVal} km` : (currentCfg.tipo === 'm2' ? formatNumber(metaPeriodoVal) + ' m²' : `${metaPeriodoVal} und`);
+            metaPeriodoLabel = `Meta Oficial: ${metaFmt}`;
+            periodoLabel = 'Cuatrienio';
+        } else if (activeYears.length === 1) {
+            const y = activeYears[0];
+            metaPeriodoVal = currentCfg.metas ? (currentCfg.metas[y] !== undefined ? currentCfg.metas[y] : 0) : 0;
+            const metaFmt = currentCfg.tipo === 'km' ? `${metaPeriodoVal} km` : (currentCfg.tipo === 'm2' ? formatNumber(metaPeriodoVal) + ' m²' : `${metaPeriodoVal} und`);
+            metaPeriodoLabel = `Meta ${y}: ${metaFmt}`;
+            periodoLabel = `Meta ${y}`;
+        } else {
+            metaPeriodoVal = activeYears.reduce((sum, y) => sum + ((currentCfg.metas && currentCfg.metas[y]) || 0), 0);
+            const metaFmt = currentCfg.tipo === 'km' ? `${metaPeriodoVal} km` : (currentCfg.tipo === 'm2' ? formatNumber(metaPeriodoVal) + ' m²' : `${metaPeriodoVal} und`);
+            metaPeriodoLabel = `Metas (${activeYears.join(', ')}): ${metaFmt}`;
+            periodoLabel = `Metas (${activeYears.join(', ')})`;
         }
 
-        // Métricas Totales y Cuatrienio (Alcance Contratado y Aporte Cuatrienio)
+        if (badgeMeta) {
+            badgeMeta.textContent = metaPeriodoLabel;
+        }
+
+        // Métricas Totales y Período (Alcance Contratado y Aporte)
         let totalLongitudContratadaM = 0;
-        let totalLongitudCuatrenioM = 0;
+        let totalLongitudAporteM = 0;
         let totalAreaContratadaM2 = 0;
-        let totalAreaCuatrenioM2 = 0;
+        let totalAreaAporteM2 = 0;
         let totalUndContratada = 0;
-        let totalUndCuatrenio = 0;
+        let totalUndAporte = 0;
         let totalInversion = 0;
         const munisSet = new Set();
 
@@ -10096,9 +10203,11 @@ window.openIndicadorDetailModal = function (indKey) {
             totalInversion += inv;
 
             const isHeredado = isCuatrenioAnterior(row);
+            const vigStr = String(row['VIGENCIA'] || '').replace('.0', '').trim();
 
-            // Contratado en el cuatrienio (excluye convenios heredados de administraciones anteriores)
-            if (!isHeredado) {
+            const countsAsContratado = !isHeredado && (isAllYears ? ['2024', '2025', '2026', '2027'].includes(vigStr) : activeYears.includes(vigStr));
+
+            if (countsAsContratado) {
                 const alcM = parseNum(row['ALCANCE (m)']) || parseNum(row['ALCANCE (M)']) || parseNum(row['LONGITUD TOTAL']) || parseNum(row['LONGITUD CONTRATADA']) || 0;
                 totalLongitudContratadaM += alcM;
 
@@ -10108,18 +10217,36 @@ window.openIndicadorDetailModal = function (indKey) {
                 totalUndContratada += 1;
             }
 
-            // Aporte Cuatrienio (calculado desde la suma de los 4 años o preservado)
-            const lc = getRowLongitudEjecutadaCuatrenio(row);
-            totalLongitudCuatrenioM += lc;
-
-            const ac = getRowAreaEjecutadaCuatrenio(row);
-            totalAreaCuatrenioM2 += ac;
-
-            const fis = parseNum(row['FISICO_NORM']) || 0;
-            if (fis >= 100) {
-                totalUndCuatrenio += 1;
-            } else if (fis > 0) {
-                totalUndCuatrenio += fis / 100;
+            // Aporte en el período seleccionado
+            if (currentCfg.tipo === 'km') {
+                if (isAllYears) {
+                    totalLongitudAporteM += getRowLongitudEjecutadaCuatrenio(row);
+                } else {
+                    activeYears.forEach(y => {
+                        totalLongitudAporteM += getRowLongitudEjecutadaPlan(row, y);
+                    });
+                }
+            } else if (currentCfg.tipo === 'm2') {
+                if (isAllYears) {
+                    totalAreaAporteM2 += getRowAreaEjecutadaCuatrenio(row);
+                } else {
+                    activeYears.forEach(y => {
+                        totalAreaAporteM2 += getRowAreaEjecutadaPlan(row, y);
+                    });
+                }
+            } else {
+                if (isAllYears) {
+                    const fis = parseNum(row['FISICO_NORM']) || 0;
+                    if (fis >= 100) totalUndAporte += 1;
+                    else if (fis > 0) totalUndAporte += fis / 100;
+                } else {
+                    const compYear = getRowCompletionYear(row);
+                    if (activeYears.includes(compYear)) {
+                        const fis = parseNum(row['FISICO_NORM']) || 0;
+                        if (fis >= 100) totalUndAporte += 1;
+                        else if (fis > 0) totalUndAporte += fis / 100;
+                    }
+                }
             }
         });
 
@@ -10127,50 +10254,63 @@ window.openIndicadorDetailModal = function (indKey) {
         let valContratadoNum = 0;
         let valContratadoStr = '';
         let valContratadoSubStr = '';
-        let valCuatrenioNum = 0;
-        let valCuatrenioStr = '';
-        let valCuatrenioSubStr = '';
+        let valAporteNum = 0;
+        let valAporteStr = '';
+        let valAporteSubStr = '';
+
+        const contratadoPeriodoSub = isAllYears ? 'en el cuatrienio' : `en vigencia ${activeYears.join(', ')}`;
+        const aportePeriodoSub = isAllYears ? 'Cuatrienio' : activeYears.join('+');
 
         if (currentCfg.tipo === 'km') {
             valContratadoNum = totalLongitudContratadaM / 1000;
             valContratadoStr = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valContratadoNum) + ' km';
-            valContratadoSubStr = `${formatNumber(Math.round(totalLongitudContratadaM))} m contratados en el cuatrienio`;
+            valContratadoSubStr = `${formatNumber(Math.round(totalLongitudContratadaM))} m contratados ${contratadoPeriodoSub}`;
 
-            valCuatrenioNum = totalLongitudCuatrenioM / 1000;
-            valCuatrenioStr = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valCuatrenioNum) + ' km';
-            valCuatrenioSubStr = `Longitud Ejecutada Cuatrienio (${formatNumber(Math.round(totalLongitudCuatrenioM))} m)`;
+            valAporteNum = totalLongitudAporteM / 1000;
+            valAporteStr = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valAporteNum) + ' km';
+            valAporteSubStr = `Longitud Ejecutada ${aportePeriodoSub} (${formatNumber(Math.round(totalLongitudAporteM))} m)`;
         } else if (currentCfg.tipo === 'm2') {
             valContratadoNum = totalAreaContratadaM2;
             valContratadoStr = formatNumber(Math.round(valContratadoNum)) + ' m²';
-            valContratadoSubStr = `${formatNumber(Math.round(totalAreaContratadaM2))} m² contratados en el cuatrienio`;
+            valContratadoSubStr = `${formatNumber(Math.round(totalAreaContratadaM2))} m² contratados ${contratadoPeriodoSub}`;
 
-            valCuatrenioNum = totalAreaCuatrenioM2;
-            valCuatrenioStr = formatNumber(Math.round(valCuatrenioNum)) + ' m²';
-            valCuatrenioSubStr = 'Área Ejecutada Cuatrienio';
+            valAporteNum = totalAreaAporteM2;
+            valAporteStr = formatNumber(Math.round(valAporteNum)) + ' m²';
+            valAporteSubStr = `Área Ejecutada ${aportePeriodoSub}`;
         } else {
             valContratadoNum = totalUndContratada;
             valContratadoStr = Number.isInteger(valContratadoNum) ? `${valContratadoNum} und` : `${valContratadoNum.toFixed(1)} und`;
-            valContratadoSubStr = 'Unidades contratadas cuatrienio';
+            valContratadoSubStr = `Unidades contratadas ${contratadoPeriodoSub}`;
 
-            valCuatrenioNum = totalUndCuatrenio;
-            valCuatrenioStr = Number.isInteger(valCuatrenioNum) ? `${valCuatrenioNum} und` : `${valCuatrenioNum.toFixed(1)} und`;
-            valCuatrenioSubStr = 'Aporte en unidades al Cuatrienio';
+            valAporteNum = totalUndAporte;
+            valAporteStr = Number.isInteger(valAporteNum) ? `${valAporteNum} und` : `${valAporteNum.toFixed(1)} und`;
+            valAporteSubStr = `Aporte en unidades (${aportePeriodoSub})`;
         }
 
-        const pctCumplido = metaCuatrienio > 0 ? (valCuatrenioNum / metaCuatrienio) * 100 : 0;
+        const pctCumplido = metaPeriodoVal > 0 ? (valAporteNum / metaPeriodoVal) * 100 : 0;
         if (badgeCumplimiento) {
             badgeCumplimiento.textContent = `${pctCumplido.toFixed(1)}% Cumplido`;
+        }
+
+        const kpiCuatrenioTitle = document.getElementById('modal-ind-kpi-cuatrenio-title');
+        if (kpiCuatrenioTitle) {
+            kpiCuatrenioTitle.textContent = isAllYears ? 'Aporte Este Cuatrienio' : `Aporte ${periodoLabel}`;
+        }
+
+        const thAporte = document.getElementById('modal-th-aporte');
+        if (thAporte) {
+            thAporte.textContent = isAllYears ? 'Aporte Cuatrienio' : `Aporte ${periodoLabel}`;
         }
 
         if (kpiConvenios) kpiConvenios.textContent = `${filtered.length} convenios`;
         if (kpiMunis) kpiMunis.textContent = `En ${munisSet.size} municipio${munisSet.size === 1 ? '' : 's'}`;
         if (kpiAlcanceTotal) kpiAlcanceTotal.textContent = valContratadoStr;
         if (kpiAlcanceM) kpiAlcanceM.textContent = valContratadoSubStr;
-        if (kpiCuatrenio) kpiCuatrenio.textContent = valCuatrenioStr;
-        if (kpiCuatrenioSub) kpiCuatrenioSub.textContent = valCuatrenioSubStr;
+        if (kpiCuatrenio) kpiCuatrenio.textContent = valAporteStr;
+        if (kpiCuatrenioSub) kpiCuatrenioSub.textContent = valAporteSubStr;
         if (kpiInversion) kpiInversion.textContent = formatCurrency(totalInversion);
 
-        const restante = Math.max(metaCuatrienio - valCuatrenioNum, 0);
+        const restante = Math.max(metaPeriodoVal - valAporteNum, 0);
         if (kpiMetaRestante) {
             const resFmt = currentCfg.tipo === 'km' ? `${restante.toFixed(2)} km` : (currentCfg.tipo === 'm2' ? formatNumber(Math.round(restante)) + ' m²' : `${restante} und`);
             kpiMetaRestante.textContent = `Restante: ${resFmt}`;
@@ -10179,12 +10319,17 @@ window.openIndicadorDetailModal = function (indKey) {
         renderModalTable(searchInput ? searchInput.value : '');
     }
 
-    // 5. Escuchadores de eventos para los filtros (Vigencia y Clasificación)
+    // 6. Escuchadores de eventos para los filtros (Meta/Año, Vigencia y Clasificación)
+    if (selMetaYearEl) selMetaYearEl.onchange = applyModalFilters;
     if (selVigenciaEl) selVigenciaEl.onchange = applyModalFilters;
     if (selClasificacionEl) selClasificacionEl.onchange = applyModalFilters;
 
     if (btnResetFilters) {
         btnResetFilters.onclick = () => {
+            if (selMetaYearEl) {
+                Array.from(selMetaYearEl.options).forEach(o => o.selected = (o.value === 'todos' || o.value === ''));
+                selMetaYearEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
             if (selVigenciaEl) {
                 Array.from(selVigenciaEl.options).forEach(o => o.selected = false);
                 selVigenciaEl.dispatchEvent(new Event('change', { bubbles: true }));
@@ -10252,34 +10397,58 @@ window.exportIndicadorReportPDF = async function () {
             ? window.currentModalFilteredRows
             : (rawData || []);
 
-        const cfg = window.currentModalIndCfg || { unit: 'km', tipo: 'km', metas: { todos: 500 } };
-        const activeFilters = window.currentModalActiveFilters || { vigencias: [], indicadores: [], clasificaciones: [] };
+        const activeFilters = window.currentModalActiveFilters || { vigencias: [], clasificaciones: [], metaYears: [] };
 
-        // 1. Título y nombres de los indicadores
-        let indTitle = 'VÍAS TERCIARIAS MEJORADAS. (RVT)';
-        if (activeFilters.indicadores && activeFilters.indicadores.length === 1) {
-            indTitle = activeFilters.indicadores[0];
-        } else if (activeFilters.indicadores && activeFilters.indicadores.length > 1) {
-            indTitle = activeFilters.indicadores.join(', ');
-        }
-        const normIndTitle = (typeof normalizarIndicador === 'function' ? normalizarIndicador(indTitle) : '') || indTitle;
+        // 1. Título y nombres de los indicadores (resuelto dinámicamente según indicador abierto)
+        let rawIndTitle = window.currentModalIndKey
+            || activeFilters.indicador
+            || (activeFilters.indicadores && activeFilters.indicadores.length > 0 ? activeFilters.indicadores[0] : null)
+            || (document.getElementById('modal-ind-title') ? document.getElementById('modal-ind-title').textContent.trim() : null)
+            || 'VÍAS TERCIARIAS MEJORADAS. (RVT)';
 
-        // Meta oficial
-        let metaVal = 500;
-        if (activeFilters.indicadores && activeFilters.indicadores.length === 1 && cfg.metas) {
-            metaVal = cfg.metas['todos'] || 0;
-        } else if (activeFilters.indicadores && activeFilters.indicadores.length > 1) {
-            metaVal = activeFilters.indicadores.reduce((acc, k) => {
-                const kNorm = typeof normalizarIndicador === 'function' ? normalizarIndicador(k) : k;
-                const c = (indicadoresEstrategicos && (indicadoresEstrategicos[kNorm] || indicadoresEstrategicos[k])) || { metas: { todos: 0 } };
-                return acc + (c.metas['todos'] || 0);
-            }, 0);
-        } else if (cfg.metas) {
-            metaVal = cfg.metas['todos'] || 500;
-        }
+        const normIndTitle = (typeof normalizarIndicador === 'function' ? normalizarIndicador(rawIndTitle) : '') || rawIndTitle;
+        const cfg = (indicadoresEstrategicos && (indicadoresEstrategicos[normIndTitle] || indicadoresEstrategicos[rawIndTitle]))
+            || window.currentModalIndCfg
+            || { unit: 'km', tipo: 'km', metas: { todos: 500 } };
 
         const unitLabel = cfg.tipo === 'km' ? 'KM' : (cfg.tipo === 'm2' ? 'M²' : 'UND');
-        const bannerMeta = `LA META EN EL PLAN DE DESARROLLO ES DE ${metaVal} ${unitLabel} DE ${normIndTitle.toUpperCase()}`;
+
+        // Formateador numérico
+        const fmtNum = (v) => {
+            if (cfg.tipo === 'km') {
+                return (v || 0).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            } else if (cfg.tipo === 'm2') {
+                return formatNumber(Math.round(v || 0));
+            } else {
+                return Number.isInteger(v) ? String(v) : (v || 0).toFixed(1);
+            }
+        };
+
+        const fmtWithUnit = (v) => `${fmtNum(v)} ${unitLabel.toLowerCase()}`;
+
+        // Meta oficial y período de medición según filtros activos
+        const metaYears = (activeFilters.metaYears && activeFilters.metaYears.length > 0) ? activeFilters.metaYears : [];
+        const isPdfAllYears = (metaYears.length === 0 || metaYears.includes('todos'));
+        const activePdfYears = isPdfAllYears ? ['2024', '2025', '2026', '2027'] : metaYears;
+
+        let metaVal = 0;
+        let bannerMeta = '';
+        let periodoTexto = '';
+
+        if (isPdfAllYears) {
+            metaVal = cfg.metas ? (cfg.metas['todos'] || 0) : 0;
+            periodoTexto = 'CUATRIENIO 2024-2027';
+            bannerMeta = `LA META EN EL PLAN DE DESARROLLO ES DE ${fmtNum(metaVal)} ${unitLabel} DE ${normIndTitle.toUpperCase()}`;
+        } else if (activePdfYears.length === 1) {
+            const y = activePdfYears[0];
+            metaVal = cfg.metas ? (cfg.metas[y] !== undefined ? cfg.metas[y] : 0) : 0;
+            periodoTexto = `META ${y}`;
+            bannerMeta = `LA META (${y}) EN EL PLAN DE DESARROLLO ES DE ${fmtNum(metaVal)} ${unitLabel} DE ${normIndTitle.toUpperCase()}`;
+        } else {
+            metaVal = activePdfYears.reduce((sum, y) => sum + ((cfg.metas && cfg.metas[y]) || 0), 0);
+            periodoTexto = `METAS ${activePdfYears.join(' + ')}`;
+            bannerMeta = `LA META (${activePdfYears.join(' + ')}) EN EL PLAN DE DESARROLLO ES DE ${fmtNum(metaVal)} ${unitLabel} DE ${normIndTitle.toUpperCase()}`;
+        }
 
         // 2. Calcular los Datos de Ejecución Anual Cuatrienio (2024 - 2027)
         // Estrictamente enfocado en el periodo constitucional 2024-2027
@@ -10370,7 +10539,7 @@ window.exportIndicadorReportPDF = async function () {
             });
         });
 
-        // Totales consolidados
+        // Totales consolidados de los 4 años
         let sumContratado = 0;
         let sumActual = 0;
         let sumHeredado = 0;
@@ -10383,21 +10552,18 @@ window.exportIndicadorReportPDF = async function () {
         });
         sumTotalCuat = sumActual + sumHeredado;
 
-        const pctCumplido = metaVal > 0 ? (sumTotalCuat / metaVal) * 100 : 0;
-        const restanteMeta = Math.max(metaVal - sumTotalCuat, 0);
+        // Aporte para el período activo seleccionado en filtros
+        let sumAportePeriodo = 0;
+        if (isPdfAllYears) {
+            sumAportePeriodo = sumTotalCuat;
+        } else {
+            activePdfYears.forEach(y => {
+                sumAportePeriodo += (ejecutadoActualData[y] || 0) + (ejecutadoHeredadoData[y] || 0);
+            });
+        }
 
-        // Formateador numérico
-        const fmtNum = (v) => {
-            if (cfg.tipo === 'km') {
-                return (v || 0).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            } else if (cfg.tipo === 'm2') {
-                return formatNumber(Math.round(v || 0));
-            } else {
-                return Number.isInteger(v) ? String(v) : (v || 0).toFixed(1);
-            }
-        };
-
-        const fmtWithUnit = (v) => `${fmtNum(v)} ${unitLabel.toLowerCase()}`;
+        const pctCumplido = metaVal > 0 ? (sumAportePeriodo / metaVal) * 100 : 0;
+        const restanteMeta = Math.max(metaVal - sumAportePeriodo, 0);
 
         // Construir Espacio 1: Tabla Contratado (Vigencias 2024-2027)
         const tableContratadoBody = [];
@@ -10458,6 +10624,7 @@ window.exportIndicadorReportPDF = async function () {
         }
 
         // 4. Construir Tabla Anexa de Convenios
+        const aporteColHeader = isPdfAllYears ? 'Aporte Cuatrienio' : `Aporte ${periodoTexto}`;
         const conveniosTableBody = [];
         conveniosTableBody.push([
             { text: 'Convenio', style: 'tableHeaderSmall', alignment: 'left' },
@@ -10465,7 +10632,7 @@ window.exportIndicadorReportPDF = async function () {
             { text: 'Clasificación', style: 'tableHeaderSmall', alignment: 'left' },
             { text: 'Vigencia', style: 'tableHeaderSmall', alignment: 'center' },
             { text: 'Estado', style: 'tableHeaderSmall', alignment: 'center' },
-            { text: 'Aporte Cuatrienio', style: 'tableHeaderSmall', alignment: 'right' },
+            { text: aporteColHeader, style: 'tableHeaderSmall', alignment: 'right' },
             { text: 'Inversión Dpto', style: 'tableHeaderSmall', alignment: 'right' },
             { text: '% Físico', style: 'tableHeaderSmall', alignment: 'center' }
         ]);
@@ -10492,22 +10659,35 @@ window.exportIndicadorReportPDF = async function () {
 
         sortedRows.forEach((r, idx) => {
             const vig = String(r['VIGENCIA'] || 'S/V').replace('.0', '').trim();
-            const isHeredado = isCuatrenioAnterior(r);
 
             let aporteC = 0;
             if (cfg.tipo === 'km') {
-                const le = parseNum(r['LONGITUD EJECUTADA']) || 0;
-                let lc = parseNum(r['LONGITUD EJECUTADA CUATRENIO']) || 0;
-                if (!isHeredado && lc === 0 && le > 0) lc = le;
-                aporteC = (lc > 0 ? lc : (isHeredado ? 0 : le)) / 1000;
+                if (isPdfAllYears) {
+                    aporteC = getRowLongitudEjecutadaCuatrenio(r) / 1000;
+                } else {
+                    activePdfYears.forEach(y => {
+                        aporteC += getRowLongitudEjecutadaPlan(r, y) / 1000;
+                    });
+                }
             } else if (cfg.tipo === 'm2') {
-                const ae = parseNum(r['AREA EJECUTADA (M2)']) || 0;
-                let ac = parseNum(r['AREA EJECUTADA CUATRENIO (M2)']) || 0;
-                if (!isHeredado && ac === 0 && ae > 0) ac = ae;
-                aporteC = ac > 0 ? ac : (isHeredado ? 0 : ae);
+                if (isPdfAllYears) {
+                    aporteC = getRowAreaEjecutadaCuatrenio(r);
+                } else {
+                    activePdfYears.forEach(y => {
+                        aporteC += getRowAreaEjecutadaPlan(r, y);
+                    });
+                }
             } else {
-                const fis = parseNum(r['FISICO_NORM']) || 0;
-                aporteC = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
+                if (isPdfAllYears) {
+                    const fis = parseNum(r['FISICO_NORM']) || 0;
+                    aporteC = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
+                } else {
+                    const compYear = getRowCompletionYear(r);
+                    if (activePdfYears.includes(compYear)) {
+                        const fis = parseNum(r['FISICO_NORM']) || 0;
+                        aporteC = fis >= 100 ? 1 : (fis > 0 ? fis / 100 : 0);
+                    }
+                }
             }
 
             const inv = (parseNum(r['APORTE DEPARTAMENTO']) || 0) + (parseNum(r['ADICION DEPARTAMENTO']) || 0);
@@ -10559,7 +10739,7 @@ window.exportIndicadorReportPDF = async function () {
             ]);
         });
 
-        // Subtotales al final de la tabla sumando el aporte cuatrienio por cada año/vigencia (2021, 2022, ...)
+        // Subtotales al final de la tabla sumando el aporte por cada año/vigencia (2021, 2022, ...)
         const sortedVigKeys = Object.keys(vigenciaSummary).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
         sortedVigKeys.forEach(vig => {
@@ -10603,11 +10783,12 @@ window.exportIndicadorReportPDF = async function () {
         ]);
 
         // Tabla de Resumen Ejecutivo por Vigencia al pie del anexo
+        const vigenciaResumenHeader = isPdfAllYears ? `APORTE CUATRIENIO (${unitLabel})` : `APORTE ${periodoTexto} (${unitLabel})`;
         const vigenciaResumenTableBody = [
             [
                 { text: 'VIGENCIA', style: 'tableHeader', alignment: 'center', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 8 },
                 { text: 'N° CONVENIOS', style: 'tableHeader', alignment: 'center', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 8 },
-                { text: `APORTE CUATRIENIO (${unitLabel})`, style: 'tableHeader', alignment: 'right', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 8 },
+                { text: vigenciaResumenHeader, style: 'tableHeader', alignment: 'right', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 8 },
                 { text: 'INVERSIÓN TOTAL DPTO', style: 'tableHeader', alignment: 'right', fillColor: '#0B5640', color: '#FFFFFF', bold: true, fontSize: 8 }
             ]
         ];
@@ -10694,12 +10875,13 @@ window.exportIndicadorReportPDF = async function () {
                                     {
                                         columns: [
                                             { text: [{ text: 'Indicador: ', bold: true }, normIndTitle], fontSize: 8, color: '#334155' },
+                                            { text: [{ text: 'Meta(s): ', bold: true }, isPdfAllYears ? 'Cuatrienio (Todas)' : activePdfYears.join(', ')], fontSize: 8, color: '#334155' },
                                             { text: [{ text: 'Vigencia(s): ', bold: true }, activeFilters.vigencias && activeFilters.vigencias.length > 0 ? activeFilters.vigencias.join(', ') : 'Todas'], fontSize: 8, color: '#334155' },
                                             { text: [{ text: 'Clasificación(es): ', bold: true }, activeFilters.clasificaciones && activeFilters.clasificaciones.length > 0 ? activeFilters.clasificaciones.join(', ') : 'Todas'], fontSize: 8, color: '#334155' }
                                         ]
                                     },
                                     {
-                                        text: `Convenios Seleccionados: ${filteredRows.length} | Inversión Total Dpto: ${formatCurrency(totalInvConvenios)} | Aporte Este Cuatrienio: ${fmtNum(sumTotalCuat)} ${unitLabel.toLowerCase()}`,
+                                        text: `Convenios Seleccionados: ${filteredRows.length} | Inversión Total Dpto: ${formatCurrency(totalInvConvenios)} | Aporte ${periodoTexto}: ${fmtNum(sumAportePeriodo)} ${unitLabel.toLowerCase()}`,
                                         fontSize: 8,
                                         bold: true,
                                         color: '#0B5640',
@@ -10798,15 +10980,15 @@ window.exportIndicadorReportPDF = async function () {
                                             {
                                                 width: '25%',
                                                 stack: [
-                                                    { text: 'META OFICIAL PLAN', fontSize: 7, bold: true, color: '#64748B' },
+                                                    { text: `META OFICIAL (${periodoTexto})`, fontSize: 7, bold: true, color: '#64748B' },
                                                     { text: `${fmtNum(metaVal)} ${unitLabel.toLowerCase()}`, fontSize: 10.5, bold: true, color: '#0F172A', margin: [0, 2, 0, 0] }
                                                 ]
                                             },
                                             {
                                                 width: '25%',
                                                 stack: [
-                                                    { text: 'APORTE CUATRIENIO', fontSize: 7, bold: true, color: '#B45309' },
-                                                    { text: `${fmtNum(sumTotalCuat)} ${unitLabel.toLowerCase()}`, fontSize: 10.5, bold: true, color: '#B45309', margin: [0, 2, 0, 0] }
+                                                    { text: `APORTE (${periodoTexto})`, fontSize: 7, bold: true, color: '#B45309' },
+                                                    { text: `${fmtNum(sumAportePeriodo)} ${unitLabel.toLowerCase()}`, fontSize: 10.5, bold: true, color: '#B45309', margin: [0, 2, 0, 0] }
                                                 ]
                                             },
                                             {
@@ -10864,13 +11046,13 @@ window.exportIndicadorReportPDF = async function () {
                     }
                 },
 
-                // Resumen Ejecutivo Consolidado de Aporte Cuatrienio por Vigencia
+                // Resumen Ejecutivo Consolidado de Aporte por Vigencia
                 {
                     margin: [0, 16, 0, 0],
                     unbreakable: true,
                     stack: [
                         {
-                            text: 'RESUMEN CONSOLIDADO DE APORTE AL CUATRIENIO POR VIGENCIA DE CONTRATACIÓN',
+                            text: `RESUMEN CONSOLIDADO DE APORTE (${periodoTexto}) POR VIGENCIA DE CONTRATACIÓN`,
                             fontSize: 9.5,
                             bold: true,
                             color: '#0B5640',
@@ -14972,6 +15154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSearchableDropdown('map-filter-estado', 'Seleccionar Estado...');
     initSearchableDropdown('map-filter-convenio-num', 'Seleccionar N° Convenio...');
 
+    initSearchableDropdown('modal-filter-meta-year', 'Todas las Metas (Cuatrienio)...');
     initSearchableDropdown('modal-filter-vigencia', 'Todas las Vigencias...');
     initSearchableDropdown('modal-filter-clasificacion', 'Todas las Clasificaciones...');
 

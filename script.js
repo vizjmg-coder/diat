@@ -6,6 +6,8 @@ let currentPage = 1;
 const rowsPerPage = 12;
 let currentSort = { column: 'CONVENIO', asc: true };
 let currentChartMode = 'top'; // 'top' o 'municipio'
+let currentFlujoMode = 'depto'; // 'depto', 'muni', 'prom_km'
+let cachedFlujoMetrics = null;
 let currentAlertFilter = 'all';
 let planMetric = 'ejecutado';
 let planAnualMetric = 'longitud';
@@ -4406,6 +4408,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('file-upload').addEventListener('change', handleFileUpload);
 
         document.getElementById('btn-reset-filters').addEventListener('click', resetFilters);
+        
+        // Botones de modo para Flujo Financiero (Total Depto, Municipio, Promedio por km)
+        const btnFlujoDepto = document.getElementById('btn-flujo-depto');
+        if (btnFlujoDepto) btnFlujoDepto.addEventListener('click', () => setFlujoMode('depto'));
+        const btnFlujoMuni = document.getElementById('btn-flujo-muni');
+        if (btnFlujoMuni) btnFlujoMuni.addEventListener('click', () => setFlujoMode('muni'));
+        const btnFlujoPromKm = document.getElementById('btn-flujo-prom-km');
+        if (btnFlujoPromKm) btnFlujoPromKm.addEventListener('click', () => setFlujoMode('prom_km'));
+
         document.getElementById('btn-close-modal').addEventListener('click', closeModal);
 
         document.getElementById('btn-export-pdf').addEventListener('click', () => {
@@ -5424,50 +5435,83 @@ function updateDashboard() {
     }
 }
 
-function updateKPIs() {
-    let activos = 0, porLiquidar = 0, sumInv = 0, sumDes = 0, sumAut = 0;
-    let totLonCon = 0, totLonEje = 0, totAreCon = 0, totAreEje = 0;
-    let totLonCuat = 0, totLonConCuat = 0;
+function setFlujoMode(mode) {
+    if (!['depto', 'muni', 'prom_km'].includes(mode)) return;
+    currentFlujoMode = mode;
 
-    filteredData.forEach(r => {
-        const est = String(r['ESTADO CONVENIO']).toLowerCase();
-        if (est.includes('ejecuci')) activos++;  // tolera ejecucin / ejecucion
-        if (est.includes('por liquidar')) porLiquidar++;
-        sumInv += (r['APORTE DEPARTAMENTO'] || 0) + (r['ADICION DEPARTAMENTO'] || 0);
-        sumDes += r['VALOR TOTAL DESEMBOLSADO'] || 0;
-        sumAut += r['VALOR TOTAL AUTORIZADO'] || 0;
+    const btnDepto = document.getElementById('btn-flujo-depto');
+    const btnMuni = document.getElementById('btn-flujo-muni');
+    const btnPromKm = document.getElementById('btn-flujo-prom-km');
+    const subtitleEl = document.getElementById('fin-header-subtitle');
+    const cardEl = document.getElementById('card-flujo-financiero');
+    const iconContainer = document.getElementById('flujo-icon-container');
+    const iconEl = document.getElementById('flujo-icon');
 
-        totLonCon += getRowLongitudContratada(r);
-        totLonEje += getRowLongitudEjecutada(r);
-        totAreCon += getRowAreaContratada(r);
-        totAreEje += getRowAreaEjecutada(r);
+    const viewDepto = document.getElementById('flujo-view-depto');
+    const viewMuni = document.getElementById('flujo-view-muni');
+    const viewPromKm = document.getElementById('flujo-view-prom-km');
 
-        totLonCuat += getRowLongitudEjecutadaCuatrenio(r);
-        totLonConCuat += getRowLongitudContratadaPlan(r);
+    // Desactivar todos los botones
+    [btnDepto, btnMuni, btnPromKm].forEach(btn => {
+        if (!btn) return;
+        btn.classList.remove('active', 'bg-white', 'shadow-xs', 'text-purple-700', 'text-sky-700', 'text-emerald-700');
+        btn.classList.add('text-slate-500');
     });
 
-    document.getElementById('kpi-total').textContent = filteredData.length;
-    document.getElementById('kpi-activos').textContent = activos;
-    document.getElementById('kpi-por-liquidar').textContent = porLiquidar;
+    // Ocultar todas las vistas
+    if (viewDepto) viewDepto.classList.add('hidden');
+    if (viewMuni) viewMuni.classList.add('hidden');
+    if (viewPromKm) viewPromKm.classList.add('hidden');
 
-    // Municipios y Subregiones Impactadas
-    const impactedMunis = new Set(
-        filteredData
-            .map(r => String(r['MUNICIPIO'] || '').trim().toUpperCase())
-            .filter(m => !isInvalidMuni(m))
-    );
-    const elMunis = document.getElementById('kpi-municipios');
-    if (elMunis) elMunis.textContent = impactedMunis.size;
+    if (mode === 'depto') {
+        if (btnDepto) {
+            btnDepto.classList.add('active', 'bg-white', 'shadow-xs', 'text-purple-700');
+            btnDepto.classList.remove('text-slate-500');
+        }
+        if (viewDepto) viewDepto.classList.remove('hidden');
+        if (subtitleEl) subtitleEl.textContent = 'Inversión vs Recursos desembolsados';
+        if (cardEl) cardEl.style.borderTop = '3px solid #8B4A97';
+        if (iconContainer) {
+            iconContainer.className = 'w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-200/60 shadow-xs shrink-0 transition-colors';
+        }
+        if (iconEl) iconEl.className = 'fa-solid fa-chart-column text-xs';
+    } else if (mode === 'muni') {
+        if (btnMuni) {
+            btnMuni.classList.add('active', 'bg-white', 'shadow-xs', 'text-sky-700');
+            btnMuni.classList.remove('text-slate-500');
+        }
+        if (viewMuni) viewMuni.classList.remove('hidden');
+        if (subtitleEl) subtitleEl.textContent = 'Aporte y cofinanciación municipal';
+        if (cardEl) cardEl.style.borderTop = '3px solid #0284C7';
+        if (iconContainer) {
+            iconContainer.className = 'w-7 h-7 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-200/60 shadow-xs shrink-0 transition-colors';
+        }
+        if (iconEl) iconEl.className = 'fa-solid fa-city text-xs';
+    } else if (mode === 'prom_km') {
+        if (btnPromKm) {
+            btnPromKm.classList.add('active', 'bg-white', 'shadow-xs', 'text-emerald-700');
+            btnPromKm.classList.remove('text-slate-500');
+        }
+        if (viewPromKm) viewPromKm.classList.remove('hidden');
+        if (subtitleEl) subtitleEl.textContent = 'Relación de inversión promedio por kilómetro';
+        if (cardEl) cardEl.style.borderTop = '3px solid #018D38';
+        if (iconContainer) {
+            iconContainer.className = 'w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200/60 shadow-xs shrink-0 transition-colors';
+        }
+        if (iconEl) iconEl.className = 'fa-solid fa-calculator text-xs';
+    }
 
-    const impactedSubs = new Set(
-        filteredData
-            .map(r => getCanonicalOfficialSubregion(r['SUBREGION'], r['MUNICIPIO']))
-            .filter(Boolean)
-    );
-    const elSubs = document.getElementById('kpi-subregiones');
-    if (elSubs) elSubs.textContent = impactedSubs.size;
+    if (cachedFlujoMetrics) {
+        renderFlujoFinancieroMetrics(cachedFlujoMetrics);
+    }
+}
+window.setFlujoMode = setFlujoMode;
 
-    // Gráfico de Barras Financiero
+function renderFlujoFinancieroMetrics(m) {
+    if (!m) return;
+    const { sumInv, sumDes, sumAut, sumMun, sumMunBase, sumMunAdic, convWithMun, totConvs, totKmCon } = m;
+
+    // 1. Vista Departamento (sigue tal cual)
     const elInv = document.getElementById('kpi-inversion');
     if (elInv) {
         elInv.textContent = formatCurrency(sumInv);
@@ -5499,6 +5543,149 @@ function updateKPIs() {
 
     const pctAut = document.getElementById('fin-pct-autorizado');
     if (pctAut) pctAut.textContent = (sumInv > 0 ? ((sumAut / sumInv) * 100).toFixed(1) : 0) + '%';
+
+    // 2. Vista Municipio (Aporte del municipio sin desembolsado y autorizado)
+    const elMunAporte = document.getElementById('kpi-mun-aporte');
+    if (elMunAporte) {
+        elMunAporte.textContent = formatCurrency(sumMun);
+        elMunAporte.title = `Aporte Total Municipio: ${formatCurrency(sumMun)} (Base: ${formatCurrency(sumMunBase)}${sumMunAdic > 0 ? ' + Adiciones: ' + formatCurrency(sumMunAdic) : ''})`;
+    }
+
+    const totalCofin = sumInv + sumMun;
+    const pctMunCofin = totalCofin > 0 ? ((sumMun / totalCofin) * 100).toFixed(1) : '0.0';
+    const elMunPctCofin = document.getElementById('kpi-mun-pct-cofin');
+    if (elMunPctCofin) {
+        elMunPctCofin.textContent = pctMunCofin + '%';
+        elMunPctCofin.title = `${pctMunCofin}% del valor total cofinanciado (${formatCurrency(totalCofin)})`;
+    }
+    const barMunCofin = document.getElementById('fin-bar-mun-cofin');
+    if (barMunCofin) {
+        barMunCofin.style.width = Math.min(100, parseFloat(pctMunCofin)) + '%';
+    }
+
+    const pctConvMun = totConvs > 0 ? ((convWithMun / totConvs) * 100).toFixed(1) : '0.0';
+    const elMunConvCount = document.getElementById('kpi-mun-conv-count');
+    if (elMunConvCount) {
+        elMunConvCount.innerHTML = `${convWithMun} <span class="text-xs font-semibold text-slate-400">/ ${totConvs}</span>`;
+        elMunConvCount.title = `${convWithMun} de ${totConvs} convenios tienen aporte de recursos municipales (${pctConvMun}%)`;
+    }
+    const badgeConv = document.getElementById('fin-mun-badge-conv');
+    if (badgeConv) {
+        badgeConv.textContent = `${pctConvMun}%`;
+    }
+    const barMunConv = document.getElementById('fin-bar-mun-conv');
+    if (barMunConv) {
+        barMunConv.style.width = Math.min(100, parseFloat(pctConvMun)) + '%';
+    }
+
+    // 3. Vista Promedio por km (Relación Departamento vs Municipio por km)
+    const promDeptoKm = totKmCon > 0 ? (sumInv / totKmCon) : 0;
+    const promMunKm = totKmCon > 0 ? (sumMun / totKmCon) : 0;
+    const promTotalKm = totKmCon > 0 ? (totalCofin / totKmCon) : 0;
+
+    const elPromDepto = document.getElementById('kpi-prom-depto-km');
+    if (elPromDepto) {
+        elPromDepto.innerHTML = `${formatCurrency(promDeptoKm)} <span class="text-[10px] font-semibold text-slate-400">/km</span>`;
+        elPromDepto.title = `Promedio Aporte Departamento: ${formatCurrency(promDeptoKm)} por km (Inversión: ${formatCurrency(sumInv)} / ${totKmCon.toFixed(2)} km contratados)`;
+    }
+
+    const elPromMuni = document.getElementById('kpi-prom-muni-km');
+    if (elPromMuni) {
+        elPromMuni.innerHTML = `${formatCurrency(promMunKm)} <span class="text-[10px] font-semibold text-slate-400">/km</span>`;
+        elPromMuni.title = `Promedio Aporte Municipio: ${formatCurrency(promMunKm)} por km (Aporte: ${formatCurrency(sumMun)} / ${totKmCon.toFixed(2)} km contratados)`;
+    }
+
+    const elPromTotal = document.getElementById('kpi-prom-total-km');
+    if (elPromTotal) {
+        elPromTotal.innerHTML = `${formatCurrency(promTotalKm)} <span class="text-[10px] font-semibold text-slate-400">/km</span>`;
+        elPromTotal.title = `Promedio Total Combinado: ${formatCurrency(promTotalKm)} por km (${formatCurrency(totalCofin)} / ${totKmCon.toFixed(2)} km contratados)`;
+    }
+
+    const badgeBaseKm = document.getElementById('fin-prom-base-km');
+    if (badgeBaseKm) {
+        badgeBaseKm.textContent = `${totKmCon.toFixed(1)} km base`;
+    }
+
+    const barPromDepto = document.getElementById('fin-bar-prom-depto');
+    if (barPromDepto) {
+        const pctDepto = promTotalKm > 0 ? (promDeptoKm / promTotalKm) * 100 : 0;
+        barPromDepto.style.width = Math.min(100, pctDepto).toFixed(1) + '%';
+    }
+
+    const barPromMuni = document.getElementById('fin-bar-prom-muni');
+    if (barPromMuni) {
+        const pctMuni = promTotalKm > 0 ? (promMunKm / promTotalKm) * 100 : 0;
+        barPromMuni.style.width = Math.min(100, pctMuni).toFixed(1) + '%';
+    }
+}
+
+function updateKPIs() {
+    let activos = 0, porLiquidar = 0, sumInv = 0, sumDes = 0, sumAut = 0;
+    let sumMun = 0, sumMunBase = 0, sumMunAdic = 0, convWithMun = 0;
+    let totLonCon = 0, totLonEje = 0, totAreCon = 0, totAreEje = 0;
+    let totLonCuat = 0, totLonConCuat = 0;
+
+    filteredData.forEach(r => {
+        const est = String(r['ESTADO CONVENIO'] || '').toLowerCase();
+        if (est.includes('ejecuci')) activos++;  // tolera ejecucin / ejecucion
+        if (est.includes('por liquidar')) porLiquidar++;
+        sumInv += (r['APORTE DEPARTAMENTO'] || 0) + (r['ADICION DEPARTAMENTO'] || 0);
+        sumDes += r['VALOR TOTAL DESEMBOLSADO'] || 0;
+        sumAut += r['VALOR TOTAL AUTORIZADO'] || 0;
+
+        const apMunBase = parseNum(r['APORTE MUNICIPIO']) || 0;
+        const apMunAdic = parseNum(r['ADICION MUNICIPIO']) || parseNum(r['ADICIONES RECURSOS MUNICIPIO']) || 0;
+        const apMunTot = apMunBase + apMunAdic;
+
+        sumMunBase += apMunBase;
+        sumMunAdic += apMunAdic;
+        sumMun += apMunTot;
+        if (apMunTot > 0) convWithMun++;
+
+        totLonCon += getRowLongitudContratada(r);
+        totLonEje += getRowLongitudEjecutada(r);
+        totAreCon += getRowAreaContratada(r);
+        totAreEje += getRowAreaEjecutada(r);
+
+        totLonCuat += getRowLongitudEjecutadaCuatrenio(r);
+        totLonConCuat += getRowLongitudContratadaPlan(r);
+    });
+
+    document.getElementById('kpi-total').textContent = filteredData.length;
+    document.getElementById('kpi-activos').textContent = activos;
+    document.getElementById('kpi-por-liquidar').textContent = porLiquidar;
+
+    // Municipios y Subregiones Impactadas
+    const impactedMunis = new Set(
+        filteredData
+            .map(r => String(r['MUNICIPIO'] || '').trim().toUpperCase())
+            .filter(m => !isInvalidMuni(m))
+    );
+    const elMunis = document.getElementById('kpi-municipios');
+    if (elMunis) elMunis.textContent = impactedMunis.size;
+
+    const impactedSubs = new Set(
+        filteredData
+            .map(r => getCanonicalOfficialSubregion(r['SUBREGION'], r['MUNICIPIO']))
+            .filter(Boolean)
+    );
+    const elSubs = document.getElementById('kpi-subregiones');
+    if (elSubs) elSubs.textContent = impactedSubs.size;
+
+    // Métricas y Gráfico de Barras de Flujo Financiero (Depto, Municipio, Promedio por km)
+    const totKmCon = totLonCon / 1000;
+    cachedFlujoMetrics = {
+        sumInv,
+        sumDes,
+        sumAut,
+        sumMun,
+        sumMunBase,
+        sumMunAdic,
+        convWithMun,
+        totConvs: filteredData.length,
+        totKmCon
+    };
+    renderFlujoFinancieroMetrics(cachedFlujoMetrics);
 
     // Physical Execution Totals (New Graphic Scheme)
 

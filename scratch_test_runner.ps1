@@ -1,16 +1,18 @@
-$outFile = [System.IO.Path]::GetTempFileName()
-$errFile = [System.IO.Path]::GetTempFileName()
 $edge = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-$p = Start-Process -FilePath $edge -ArgumentList @(
-    "--headless=new",
-    "--disable-gpu",
-    "--dump-dom",
-    "http://127.0.0.1:5501/test_pdf_2024_2027.html"
-) -RedirectStandardOutput $outFile -RedirectStandardError $errFile -Wait -PassThru
+if (-not (Test-Path $edge)) { $edge = "C:\Program Files\Microsoft\Edge\Application\msedge.exe" }
+$escapedPath = ($PSScriptRoot -replace '\\', '/') -replace ' ', '%20'
+$url = "file:///" + $escapedPath + "/scratch_test_flujo.html"
+$tempFile = [System.IO.Path]::GetTempFileName()
+Start-Process -FilePath $edge -ArgumentList @("--headless=new", "--disable-gpu", "--allow-file-access-from-files", "--dump-dom", $url) -RedirectStandardOutput $tempFile -Wait
+$content = Get-Content $tempFile -Raw
+Remove-Item $tempFile -ErrorAction SilentlyContinue
 
-$lines = Get-Content $outFile
-$outputLine = $lines | Select-String -Pattern "id=""output""" -Context 0,2
-Write-Host "--- TEST RESULT ---"
-$outputLine
-
-Remove-Item $outFile, $errFile -ErrorAction SilentlyContinue
+if ($content -match '<pre id="output">([\s\S]*?)</pre>') {
+    $json = $matches[1] | ConvertFrom-Json
+    foreach ($r in $json) {
+        $color = if ($r.status -eq 'PASS') { 'Green' } else { 'Red' }
+        Write-Host "[$($r.status)] $($r.msg)" -ForegroundColor $color
+    }
+} else {
+    Write-Host "No output found in DOM" -ForegroundColor Red
+}

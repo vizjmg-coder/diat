@@ -447,98 +447,176 @@
                                 <!-- Fila 2: Flujo Financiero (Izq) y Ejecución Física (Der) -->
                                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
                                     <!-- Flujo Financiero (6 cols) -->
-                                    <div class="lg:col-span-6 kpi-card flex flex-col justify-between gap-2.5 px-4 py-3"
+                                    <div id="card-flujo-financiero" class="lg:col-span-6 kpi-card flex flex-col justify-between gap-2.5 px-4 py-3 transition-colors"
                                         style="border-top:3px solid #8B4A97;background:#FFFFFF;">
                                         <!-- Cabecera -->
-                                        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                                        <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
                                             <div class="flex items-center gap-2">
-                                                <div
-                                                    class="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-200/60 shadow-xs shrink-0">
-                                                    <i class="fa-solid fa-chart-column text-xs"></i>
+                                                <div id="flujo-icon-container"
+                                                    class="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-200/60 shadow-xs shrink-0 transition-colors">
+                                                    <i id="flujo-icon" class="fa-solid fa-chart-column text-xs"></i>
                                                 </div>
                                                 <div>
-                                                    <h4
-                                                        class="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight">
+                                                    <h4 class="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight">
                                                         Flujo Financiero</h4>
-                                                    <p class="text-[10px] text-slate-400 font-medium">Inversión vs
+                                                    <p class="text-[10px] text-slate-400 font-medium" id="fin-header-subtitle">Inversión vs
                                                         Recursos desembolsados</p>
                                                 </div>
                                             </div>
-                                            <span
-                                                class="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-100">Total
-                                                Depto</span>
+                                            <!-- Botones para elegir Departamento, Municipio y Promedio por km -->
+                                            <div class="inline-flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0" role="tablist">
+                                                <button type="button" id="btn-flujo-depto" class="flujo-mode-btn active px-2 sm:px-2.5 py-0.5 text-[9.5px] font-bold rounded-md transition-all text-purple-700 bg-white shadow-xs cursor-pointer" title="Ver recursos del Departamento (Inversión, Desembolso y Autorizado)">
+                                                    Total Depto
+                                                </button>
+                                                <button type="button" id="btn-flujo-muni" class="flujo-mode-btn px-2 sm:px-2.5 py-0.5 text-[9.5px] font-bold rounded-md transition-all text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer" title="Ver aporte de los Municipios">
+                                                    Municipio
+                                                </button>
+                                                <button type="button" id="btn-flujo-prom-km" class="flujo-mode-btn px-2 sm:px-2.5 py-0.5 text-[9.5px] font-bold rounded-md transition-all text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer" title="Ver relación de inversión promedio por kilómetro">
+                                                    Promedio por km
+                                                </button>
+                                            </div>
                                         </div>
 
-                                        <!-- Barras Horizontales con Valores Visibles -->
-                                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full">
+                                        <!-- Vista 1: Total Depto (Activa por defecto) -->
+                                        <div id="flujo-view-depto" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full">
                                             <!-- Barra 1: Inversión Total -->
-                                            <div
-                                                class="flex flex-col justify-between gap-1 p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-h-[66px]">
+                                            <div class="flex flex-col justify-between gap-1 p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-h-[66px]">
                                                 <div class="flex items-center justify-between gap-1">
-                                                    <span
-                                                        class="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1 uppercase tracking-wide">
-                                                        <span
-                                                            class="w-1.5 h-1.5 rounded-full bg-[#8B4A97] shrink-0"></span>
+                                                    <span class="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1 uppercase tracking-wide">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-[#8B4A97] shrink-0"></span>
                                                         Inversión
                                                     </span>
-                                                    <span
-                                                        class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 shrink-0">Total</span>
+                                                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 shrink-0">Total</span>
                                                 </div>
-                                                <h3 class="text-sm font-extrabold text-slate-900 truncate tracking-tight"
-                                                    id="kpi-inversion" title="$0">$0</h3>
+                                                <h3 class="text-sm font-extrabold text-slate-900 truncate tracking-tight" id="kpi-inversion" title="$0">$0</h3>
                                                 <div class="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
-                                                    <div id="fin-bar-inversion"
-                                                        class="h-full rounded-full transition-all duration-500"
-                                                        style="width:100%;background:linear-gradient(90deg, #8B4A97, #A855F7);">
-                                                    </div>
+                                                    <div id="fin-bar-inversion" class="h-full rounded-full transition-all duration-500" style="width:100%;background:linear-gradient(90deg, #8B4A97, #A855F7);"></div>
                                                 </div>
                                             </div>
 
                                             <!-- Barra 2: Desembolsado -->
-                                            <div
-                                                class="flex flex-col justify-between gap-1 p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-h-[66px]">
+                                            <div class="flex flex-col justify-between gap-1 p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-h-[66px]">
                                                 <div class="flex items-center justify-between gap-1">
-                                                    <span
-                                                        class="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1 uppercase tracking-wide">
-                                                        <span
-                                                            class="w-1.5 h-1.5 rounded-full bg-[#3561AB] shrink-0"></span>
+                                                    <span class="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1 uppercase tracking-wide">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-[#3561AB] shrink-0"></span>
                                                         Desembolso
                                                     </span>
-                                                    <span
-                                                        class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 shrink-0"
-                                                        id="fin-pct-desembolsado">0%</span>
+                                                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 shrink-0" id="fin-pct-desembolsado">0%</span>
                                                 </div>
-                                                <h3 class="text-sm font-extrabold text-slate-900 truncate tracking-tight"
-                                                    id="kpi-desembolsado" title="$0">$0</h3>
+                                                <h3 class="text-sm font-extrabold text-slate-900 truncate tracking-tight" id="kpi-desembolsado" title="$0">$0</h3>
                                                 <div class="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
-                                                    <div id="fin-bar-desembolsado"
-                                                        class="h-full rounded-full transition-all duration-500"
-                                                        style="width:0%;background:linear-gradient(90deg, #3561AB, #3B82F6);">
-                                                    </div>
+                                                    <div id="fin-bar-desembolsado" class="h-full rounded-full transition-all duration-500" style="width:0%;background:linear-gradient(90deg, #3561AB, #3B82F6);"></div>
                                                 </div>
                                             </div>
 
                                             <!-- Barra 3: Autorizado -->
-                                            <div
-                                                class="flex flex-col justify-between gap-1 p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-h-[66px]">
+                                            <div class="flex flex-col justify-between gap-1 p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-h-[66px]">
                                                 <div class="flex items-center justify-between gap-1">
-                                                    <span
-                                                        class="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1 uppercase tracking-wide">
-                                                        <span
-                                                            class="w-1.5 h-1.5 rounded-full bg-[#0B5640] shrink-0"></span>
+                                                    <span class="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1 uppercase tracking-wide">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-[#0B5640] shrink-0"></span>
                                                         Autorizado
                                                     </span>
-                                                    <span
-                                                        class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 shrink-0"
-                                                        id="fin-pct-autorizado">0%</span>
+                                                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 shrink-0" id="fin-pct-autorizado">0%</span>
                                                 </div>
-                                                <h3 class="text-sm font-extrabold text-slate-900 truncate tracking-tight"
-                                                    id="kpi-autorizado" title="$0">$0</h3>
+                                                <h3 class="text-sm font-extrabold text-slate-900 truncate tracking-tight" id="kpi-autorizado" title="$0">$0</h3>
                                                 <div class="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
-                                                    <div id="fin-bar-autorizado"
-                                                        class="h-full rounded-full transition-all duration-500"
-                                                        style="width:0%;background:linear-gradient(90deg, #0B5640, #018D38);">
-                                                    </div>
+                                                    <div id="fin-bar-autorizado" class="h-full rounded-full transition-all duration-500" style="width:0%;background:linear-gradient(90deg, #0B5640, #018D38);"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Vista 2: Municipio (Sin información de desembolsado y autorizado) -->
+                                        <div id="flujo-view-muni" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full">
+                                            <!-- Barra 1: Aporte Total Municipio -->
+                                            <div class="flex flex-col justify-between gap-1 p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-h-[66px]">
+                                                <div class="flex items-center justify-between gap-1">
+                                                    <span class="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1 uppercase tracking-wide">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-[#0284C7] shrink-0"></span>
+                                                        Aporte Municipio
+                                                    </span>
+                                                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 shrink-0">Total</span>
+                                                </div>
+                                                <h3 class="text-sm font-extrabold text-slate-900 truncate tracking-tight" id="kpi-mun-aporte" title="$0">$0</h3>
+                                                <div class="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
+                                                    <div id="fin-bar-mun-total" class="h-full rounded-full transition-all duration-500" style="width:100%;background:linear-gradient(90deg, #0284C7, #38BDF8);"></div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Barra 2: % Cofinanciación Municipal -->
+                                            <div class="flex flex-col justify-between gap-1 p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-h-[66px]">
+                                                <div class="flex items-center justify-between gap-1">
+                                                    <span class="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1 uppercase tracking-wide">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-[#0D9488] shrink-0"></span>
+                                                        % Cofinanciación
+                                                    </span>
+                                                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 shrink-0" id="fin-mun-badge-cofin">Municipal</span>
+                                                </div>
+                                                <h3 class="text-sm font-extrabold text-slate-900 truncate tracking-tight" id="kpi-mun-pct-cofin" title="0.0%">0.0%</h3>
+                                                <div class="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
+                                                    <div id="fin-bar-mun-cofin" class="h-full rounded-full transition-all duration-500" style="width:0%;background:linear-gradient(90deg, #0D9488, #14B8A6);"></div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Barra 3: Convenios con Aporte Municipal -->
+                                            <div class="flex flex-col justify-between gap-1 p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-h-[66px]">
+                                                <div class="flex items-center justify-between gap-1">
+                                                    <span class="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1 uppercase tracking-wide">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-[#6366F1] shrink-0"></span>
+                                                        Convenios c/ Aporte
+                                                    </span>
+                                                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 shrink-0" id="fin-mun-badge-conv">0%</span>
+                                                </div>
+                                                <h3 class="text-sm font-extrabold text-slate-900 truncate tracking-tight flex items-baseline gap-1" id="kpi-mun-conv-count" title="0">0</h3>
+                                                <div class="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
+                                                    <div id="fin-bar-mun-conv" class="h-full rounded-full transition-all duration-500" style="width:0%;background:linear-gradient(90deg, #6366F1, #818CF8);"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Vista 3: Promedio por km (Relación Departamento y Municipio por km) -->
+                                        <div id="flujo-view-prom-km" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full">
+                                            <!-- Barra 1: Promedio Depto / km -->
+                                            <div class="flex flex-col justify-between gap-1 p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-h-[66px]">
+                                                <div class="flex items-center justify-between gap-1">
+                                                    <span class="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1 uppercase tracking-wide">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-[#8B4A97] shrink-0"></span>
+                                                        Depto / km
+                                                    </span>
+                                                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 shrink-0">Depto</span>
+                                                </div>
+                                                <h3 class="text-sm font-extrabold text-slate-900 truncate tracking-tight flex items-baseline gap-1" id="kpi-prom-depto-km" title="$0/km">$0 <span class="text-[10px] font-semibold text-slate-400">/km</span></h3>
+                                                <div class="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
+                                                    <div id="fin-bar-prom-depto" class="h-full rounded-full transition-all duration-500" style="width:0%;background:linear-gradient(90deg, #8B4A97, #A855F7);"></div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Barra 2: Promedio Municipio / km -->
+                                            <div class="flex flex-col justify-between gap-1 p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-h-[66px]">
+                                                <div class="flex items-center justify-between gap-1">
+                                                    <span class="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1 uppercase tracking-wide">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-[#0284C7] shrink-0"></span>
+                                                        Municipio / km
+                                                    </span>
+                                                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 shrink-0">Municipio</span>
+                                                </div>
+                                                <h3 class="text-sm font-extrabold text-slate-900 truncate tracking-tight flex items-baseline gap-1" id="kpi-prom-muni-km" title="$0/km">$0 <span class="text-[10px] font-semibold text-slate-400">/km</span></h3>
+                                                <div class="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
+                                                    <div id="fin-bar-prom-muni" class="h-full rounded-full transition-all duration-500" style="width:0%;background:linear-gradient(90deg, #0284C7, #38BDF8);"></div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Barra 3: Promedio Total / km -->
+                                            <div class="flex flex-col justify-between gap-1 p-2.5 rounded-xl bg-slate-50 border border-slate-100 min-h-[66px]">
+                                                <div class="flex items-center justify-between gap-1">
+                                                    <span class="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1 uppercase tracking-wide">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-[#018D38] shrink-0"></span>
+                                                        Total / km
+                                                    </span>
+                                                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 shrink-0" id="fin-prom-base-km">0 km</span>
+                                                </div>
+                                                <h3 class="text-sm font-extrabold text-slate-900 truncate tracking-tight flex items-baseline gap-1" id="kpi-prom-total-km" title="$0/km">$0 <span class="text-[10px] font-semibold text-slate-400">/km</span></h3>
+                                                <div class="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
+                                                    <div id="fin-bar-prom-total" class="h-full rounded-full transition-all duration-500" style="width:100%;background:linear-gradient(90deg, #0B5640, #018D38);"></div>
                                                 </div>
                                             </div>
                                         </div>

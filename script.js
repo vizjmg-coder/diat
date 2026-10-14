@@ -683,9 +683,63 @@ async function getBase64FromHtmlElement(elementId) {
     }
 }
 
+const ALL_125_MUNI = [
+    { name: 'MEDELLÍN', sub: 'VALLE DE ABURRÁ' }, { name: 'BELLO', sub: 'VALLE DE ABURRÁ' }, { name: 'ITAGÜÍ', sub: 'VALLE DE ABURRÁ' },
+    { name: 'ENVIGADO', sub: 'VALLE DE ABURRÁ' }, { name: 'SABANETA', sub: 'VALLE DE ABURRÁ' }, { name: 'CALDAS', sub: 'VALLE DE ABURRÁ' },
+    { name: 'COPACABANA', sub: 'VALLE DE ABURRÁ' }, { name: 'GIRARDOTA', sub: 'VALLE DE ABURRÁ' }, { name: 'LA ESTRELLA', sub: 'VALLE DE ABURRÁ' },
+    { name: 'BARBOSA', sub: 'VALLE DE ABURRÁ' },
+    { name: 'CAUCASIA', sub: 'BAJO CAUCA' }, { name: 'EL BAGRE', sub: 'BAJO CAUCA' }, { name: 'NECHÍ', sub: 'BAJO CAUCA' },
+    { name: 'TARAZÁ', sub: 'BAJO CAUCA' }, { name: 'CÁCERES', sub: 'BAJO CAUCA' }, { name: 'ZARAGOZA', sub: 'BAJO CAUCA' },
+    { name: 'PUERTO BERRÍO', sub: 'MAGDALENA MEDIO' }, { name: 'PUERTO NARE', sub: 'MAGDALENA MEDIO' }, { name: 'PUERTO TRIUNFO', sub: 'MAGDALENA MEDIO' },
+    { name: 'YONDÓ', sub: 'MAGDALENA MEDIO' }, { name: 'CARACOLÍ', sub: 'MAGDALENA MEDIO' }, { name: 'MACEO', sub: 'MAGDALENA MEDIO' },
+    { name: 'AMALFI', sub: 'NORDESTE' }, { name: 'ANORÍ', sub: 'NORDESTE' }, { name: 'CISNEROS', sub: 'NORDESTE' },
+    { name: 'REMEDIOS', sub: 'NORDESTE' }, { name: 'SAN ROQUE', sub: 'NORDESTE' }, { name: 'SANTO DOMINGO', sub: 'NORDESTE' },
+    { name: 'SEGOVIA', sub: 'NORDESTE' }, { name: 'VEGACHÍ', sub: 'NORDESTE' }, { name: 'YALÍ', sub: 'NORDESTE' }, { name: 'YOLOMBÓ', sub: 'NORDESTE' },
+    { name: 'ANGOSTURA', sub: 'NORTE' }, { name: 'BELMIRA', sub: 'NORTE' }, { name: 'BRICEÑO', sub: 'NORTE' },
+    { name: 'CAMPAMENTO', sub: 'NORTE' }, { name: 'CAROLINA DEL PRÍNCIPE', sub: 'NORTE' }, { name: 'DONMATÍAS', sub: 'NORTE' },
+    { name: 'ENTRERRÍOS', sub: 'NORTE' }, { name: 'GÓMEZ PLATA', sub: 'NORTE' }, { name: 'GUADALUPE', sub: 'NORTE' },
+    { name: 'ITUANGO', sub: 'NORTE' }, { name: 'SAN ANDRÉS DE CUERQUIA', sub: 'NORTE' }, { name: 'SAN JOSÉ DE LA MONTAÑA', sub: 'NORTE' },
+    { name: 'SAN PEDRO DE LOS MILAGROS', sub: 'NORTE' }, { name: 'SANTA ROSA DE OSOS', sub: 'NORTE' }, { name: 'TOLEDO', sub: 'NORTE' },
+    { name: 'VALDIVIA', sub: 'NORTE' }, { name: 'YARUMAL', sub: 'NORTE' },
+    { name: 'ABRIAQUÍ', sub: 'OCCIDENTE' }, { name: 'ANZÁ', sub: 'OCCIDENTE' }, { name: 'ARMENIA', sub: 'OCCIDENTE' },
+    { name: 'BURITICÁ', sub: 'OCCIDENTE' }, { name: 'CAICEDO', sub: 'OCCIDENTE' }, { name: 'CAÑASGORDAS', sub: 'OCCIDENTE' },
+    { name: 'DABEIBA', sub: 'OCCIDENTE' }, { name: 'EBÉJICO', sub: 'OCCIDENTE' }, { name: 'FRONTINO', sub: 'OCCIDENTE' },
+    { name: 'GIRALDO', sub: 'OCCIDENTE' }, { name: 'HELICONIA', sub: 'OCCIDENTE' }, { name: 'LIBORINA', sub: 'OCCIDENTE' },
+    { name: 'OLAYA', sub: 'OCCIDENTE' }, { name: 'PEQUE', sub: 'OCCIDENTE' }, { name: 'SABANALARGA', sub: 'OCCIDENTE' },
+    { name: 'SAN JERÓNIMO', sub: 'OCCIDENTE' }, { name: 'SANTA FE DE ANTIOQUIA', sub: 'OCCIDENTE' }, { name: 'SOPETRÁN', sub: 'OCCIDENTE' }, { name: 'URAMITA', sub: 'OCCIDENTE' },
+    { name: 'ABEJORRAL', sub: 'ORIENTE' }, { name: 'ALEJANDRÍA', sub: 'ORIENTE' }, { name: 'ARGELIA', sub: 'ORIENTE' },
+    { name: 'COCORNÁ', sub: 'ORIENTE' }, { name: 'CONCEPCIÓN', sub: 'ORIENTE' }, { name: 'EL CARMEN DE VIBORAL', sub: 'ORIENTE' },
+    { name: 'EL PEÑOL', sub: 'ORIENTE' }, { name: 'EL RETIRO', sub: 'ORIENTE' }, { name: 'EL SANTUARIO', sub: 'ORIENTE' },
+    { name: 'GRANADA', sub: 'ORIENTE' }, { name: 'GUATAPÉ', sub: 'ORIENTE' }, { name: 'GUARNE', sub: 'ORIENTE' },
+    { name: 'LA CEJA', sub: 'ORIENTE' }, { name: 'LA UNIÓN', sub: 'ORIENTE' }, { name: 'MARINILLA', sub: 'ORIENTE' },
+    { name: 'NARIÑO', sub: 'ORIENTE' }, { name: 'RIONEGRO', sub: 'ORIENTE' }, { name: 'SAN CARLOS', sub: 'ORIENTE' },
+    { name: 'SAN FRANCISCO', sub: 'ORIENTE' }, { name: 'SAN LUIS', sub: 'ORIENTE' }, { name: 'SAN RAFAEL', sub: 'ORIENTE' },
+    { name: 'SAN VICENTE FERRER', sub: 'ORIENTE' }, { name: 'SONSÓN', sub: 'ORIENTE' },
+    { name: 'AMAGÁ', sub: 'SUROESTE' }, { name: 'ANDES', sub: 'SUROESTE' }, { name: 'ANGELÓPOLIS', sub: 'SUROESTE' },
+    { name: 'BETANIA', sub: 'SUROESTE' }, { name: 'BETULIA', sub: 'SUROESTE' }, { name: 'CARAMANTA', sub: 'SUROESTE' },
+    { name: 'CIUDAD BOLÍVAR', sub: 'SUROESTE' }, { name: 'CONCORDIA', sub: 'SUROESTE' }, { name: 'FREDONIA', sub: 'SUROESTE' },
+    { name: 'HISPANIA', sub: 'SUROESTE' }, { name: 'JARDÍN', sub: 'SUROESTE' }, { name: 'JERICÓ', sub: 'SUROESTE' },
+    { name: 'LA PINTADA', sub: 'SUROESTE' }, { name: 'MONTEBELLO', sub: 'SUROESTE' }, { name: 'PUEBLORRICO', sub: 'SUROESTE' },
+    { name: 'SALGAR', sub: 'SUROESTE' }, { name: 'SANTA BÁRBARA', sub: 'SUROESTE' }, { name: 'TÁMESIS', sub: 'SUROESTE' },
+    { name: 'TARSO', sub: 'SUROESTE' }, { name: 'TITIRIBÍ', sub: 'SUROESTE' }, { name: 'URRAO', sub: 'SUROESTE' },
+    { name: 'VALPARAÍSO', sub: 'SUROESTE' }, { name: 'VENECIA', sub: 'SUROESTE' },
+    { name: 'APARTADÓ', sub: 'URABÁ' }, { name: 'ARBOLETES', sub: 'URABÁ' }, { name: 'CAREPA', sub: 'URABÁ' },
+    { name: 'CHIGORODÓ', sub: 'URABÁ' }, { name: 'MURINDÓ', sub: 'URABÁ' }, { name: 'MUTATÁ', sub: 'URABÁ' },
+    { name: 'NECOCLÍ', sub: 'URABÁ' }, { name: 'SAN JUAN DE URABÁ', sub: 'URABÁ' }, { name: 'SAN PEDRO DE URABÁ', sub: 'URABÁ' },
+    { name: 'TURBO', sub: 'URABÁ' }, { name: 'VIGÍA DEL FUERTE', sub: 'URABÁ' }
+];
+window.ALL_125_MUNI = ALL_125_MUNI;
+
 const isInvalidMuni = (m) => {
-    const s = String(m || '').trim().toUpperCase();
-    return !s || s === 'S/D' || s === 'SD' || s === 'SIN DATO' || s === 'N/A' || s === 'NO DEFINIDO' || s === 'S / D' || s === 'SIN DEFINIR' || s === 'VARIAS' || s === 'VARIOS' || s === 'DEPARTAMENTAL' || s === '0' || s === 'NULL';
+    if (m === null || m === undefined) return true;
+    const s = String(m).trim().toUpperCase();
+    if (!s || s === 'S/D' || s === 'SD' || s === 'SIN DATO' || s === 'N/A' || s === 'NO DEFINIDO' || 
+        s === 'S / D' || s === 'SIN DEFINIR' || s === 'VARIAS' || s === 'VARIOS' || 
+        s === 'DEPARTAMENTAL' || s === '0' || s === 'NULL' || s === 'UNDEFINED' || 
+        s === 'TODOS' || s === 'TODAS' || s === 'NONE') return true;
+    // Ocultar registros numéricos (como índices de fila o números de convenio 291, 290, 154, 157 sin municipio asignado)
+    if (/^\d+(\.\d+)?$/.test(s) || /^\d+$/.test(s) || (!isNaN(Number(s)) && !isNaN(parseFloat(s)))) return true;
+    return false;
 };
 
 // Helper: resolves subregion based on municipality name
@@ -2886,19 +2940,24 @@ async function generateVectorMapAntioquiaSVG(filteredRows, svgWidth = 542, svgHe
         }
 
         // 2. Extraer municipios impactados y convenios activos
-        const norm = (s) => String(s || '')
-            .toUpperCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^A-Z ]/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
+        const cleanStr = (str) => {
+            let s = String(str || '')
+                .replace(/\uFFFD/g, 'Ñ')
+                .replace(/\?/g, 'Ñ')
+                .replace(/¥/g, 'Ñ')
+                .replace(/\u00A5/g, 'Ñ')
+                .replace(/Ã‘/g, 'Ñ')
+                .replace(/Ã±/g, 'ñ');
+            if (typeof cleanMojibake === 'function') s = cleanMojibake(s);
+            return typeof normCanonicalMuni === 'function' ? normCanonicalMuni(s) : s.toUpperCase().trim();
+        };
 
         const muniCounts = {};
         const impactedConvs = new Set();
         (filteredRows || []).forEach(r => {
-            const m = norm(r['MUNICIPIO']);
-            if (m) muniCounts[m] = (muniCounts[m] || 0) + 1;
+            const rawM = r['MUNICIPIO'];
+            const m = cleanStr(rawM);
+            if (m && !isInvalidMuni(m)) muniCounts[m] = (muniCounts[m] || 0) + 1;
             const cNum = String(r['CONVENIO'] || '').trim();
             if (cNum) impactedConvs.add(cNum);
         });
@@ -2958,8 +3017,8 @@ async function generateVectorMapAntioquiaSVG(filteredRows, svgWidth = 542, svgHe
 
         mpioData.features.forEach(f => {
             const rawName = f.properties.NOMBRE_MPI || f.properties.MPIO_CNMBR || f.properties.NOM_MPIO || '';
-            const mNorm = norm(rawName);
-            const count = muniCounts[mNorm] || 0;
+            const mNorm = cleanStr(rawName);
+            const count = (mNorm && muniCounts[mNorm]) || 0;
             const isImpacted = count > 0;
             if (isImpacted) impactedMuniCount++;
 
@@ -3249,7 +3308,7 @@ async function generateResumenPDF() {
         const filtersText = activeFilters.length > 0 ? activeFilters.join(' | ') : 'NINGUNO (MOSTRANDO TODOS LOS CONVENIOS)';
 
         // 2. Perform calculations mirroring updateKPIs()
-        let activos = 0, porLiquidar = 0, suspendidos = 0, sumInv = 0, sumDes = 0, sumAut = 0;
+        let activos = 0, porLiquidar = 0, suspendidos = 0, liquidados = 0, sumInv = 0, sumDes = 0, sumAut = 0;
         let totLonCon = 0, totLonEje = 0;
         let totAreCon = 0, totAreEje = 0;
 
@@ -3260,6 +3319,7 @@ async function generateResumenPDF() {
             if (est.includes('ejecuci')) activos++;
             if (est.includes('por liquidar')) porLiquidar++;
             if (estNorm.includes('suspendido') || estNorm.includes('riesgo medio') || estNorm.includes('medio')) suspendidos++;
+            if (estNorm.includes('liquidado') && !estNorm.includes('por liquidar')) liquidados++;
 
             sumInv += (r['APORTE DEPARTAMENTO'] || 0) + (r['ADICION DEPARTAMENTO'] || 0);
             sumDes += r['VALOR TOTAL DESEMBOLSADO'] || 0;
@@ -3270,6 +3330,44 @@ async function generateResumenPDF() {
             totAreCon += getRowAreaContratada(r);
             totAreEje += getRowAreaEjecutada(r);
         });
+
+        // Contar municipios impactados con normalización idéntica al dashboard y mapa vectorial
+        const cleanPDFMuni = (str) => {
+            let s = String(str || '')
+                .replace(/\uFFFD/g, 'Ñ')
+                .replace(/\?/g, 'Ñ')
+                .replace(/¥/g, 'Ñ')
+                .replace(/\u00A5/g, 'Ñ')
+                .replace(/Ã‘/g, 'Ñ')
+                .replace(/Ã±/g, 'ñ');
+            if (typeof cleanMojibake === 'function') s = cleanMojibake(s);
+            return typeof normCanonicalMuni === 'function' ? normCanonicalMuni(s) : s.toUpperCase().trim();
+        };
+
+        const muniCountsPDF = {};
+        filteredData.forEach(r => {
+            const m = cleanPDFMuni(r['MUNICIPIO']);
+            if (m && !isInvalidMuni(m)) {
+                muniCountsPDF[m] = (muniCountsPDF[m] || 0) + 1;
+            }
+        });
+
+        let cantMunisImpactados = 0;
+        if (typeof synMpioData !== 'undefined' && synMpioData && synMpioData.features && synMpioData.features.length === 125) {
+            synMpioData.features.forEach(f => {
+                const rawName = f.properties.NOMBRE_MPI || f.properties.MPIO_CNMBR || f.properties.NOM_MPIO || '';
+                const mNorm = cleanPDFMuni(rawName);
+                if (mNorm && (muniCountsPDF[mNorm] || 0) > 0) cantMunisImpactados++;
+            });
+        } else if (typeof ALL_125_MUNI !== 'undefined' && Array.isArray(ALL_125_MUNI)) {
+            ALL_125_MUNI.forEach(item => {
+                const mNorm = cleanPDFMuni(item.name);
+                if (mNorm && (muniCountsPDF[mNorm] || 0) > 0) cantMunisImpactados++;
+            });
+        } else {
+            const distinctCanonical = new Set(Object.keys(muniCountsPDF).filter(k => !isInvalidMuni(k)));
+            cantMunisImpactados = distinctCanonical.size;
+        }
 
         // 3. Fetch institutional logo & Generate Vector Map (Width 370, Height 205 for left half of landscape page)
         const [logoBase64, mapSvgMarkup] = await Promise.all([
@@ -3305,11 +3403,11 @@ async function generateResumenPDF() {
                 body: [[
                     {
                         stack: [
-                            { text: title, fontSize: 6.2, bold: true, color: titleColor },
-                            { text: String(count), fontSize: 11.5, bold: true, color: countColor, margin: [0, 1, 0, 0] }
+                            { text: title, fontSize: 5.8, bold: true, color: titleColor },
+                            { text: String(count), fontSize: 10.5, bold: true, color: countColor, margin: [0, 1, 0, 0] }
                         ],
                         fillColor: bg,
-                        margin: [6, 3, 6, 3]
+                        margin: [5, 2.2, 5, 2.2]
                     }
                 ]]
             },
@@ -3325,16 +3423,24 @@ async function generateResumenPDF() {
                 {
                     columns: [
                         makeKpiMiniCard('TOTAL CONVENIOS', filteredData.length, '#64748B', '#1E293B', '#F8FAFC', '#E2E8F0'),
-                        { width: 6, text: '' },
+                        { width: 5, text: '' },
                         makeKpiMiniCard('EN EJECUCIÓN', activos, '#018D38', '#018D38', '#E6F4EA', '#CEEAD6')
                     ],
-                    margin: [0, 0, 0, 4]
+                    margin: [0, 0, 0, 3]
                 },
                 {
                     columns: [
                         makeKpiMiniCard('SUSPENDIDOS', suspendidos, '#C5221F', '#C5221F', '#FCE8E6', '#FAD2CF'),
-                        { width: 6, text: '' },
+                        { width: 5, text: '' },
                         makeKpiMiniCard('POR LIQUIDAR', porLiquidar, '#C2410C', '#C2410C', '#FFEFE0', '#FFD8A8')
+                    ],
+                    margin: [0, 0, 0, 3]
+                },
+                {
+                    columns: [
+                        makeKpiMiniCard('MUNICIPIOS IMPACTADOS', `${cantMunisImpactados} de 125`, '#0D9488', '#0F766E', '#F0FDFA', '#CCFBF1'),
+                        { width: 5, text: '' },
+                        makeKpiMiniCard('LIQUIDADOS', liquidados, '#2563EB', '#1D4ED8', '#EFF6FF', '#BFDBFE')
                     ]
                 }
             ]
@@ -4885,17 +4991,12 @@ function processExcelData(data) {
             if (row['MUNICIPIO'] && String(row['MUNICIPIO']).trim()) muniVal = String(row['MUNICIPIO']).trim();
             else if (row[' '] && String(row[' ']).trim()) muniVal = String(row[' ']).trim();
             else if (row[''] && String(row['']).trim()) muniVal = String(row['']).trim();
-            else {
-                for (var k in row) {
-                    if (k.startsWith('__EMPTY') && row[k] && String(row[k]).trim()) {
-                        muniVal = String(row[k]).trim();
-                        break;
-                    }
-                }
-            }
         }
         if (typeof cleanMojibake === 'function') {
             muniVal = cleanMojibake(muniVal);
+        }
+        if (muniVal && isInvalidMuni(muniVal)) {
+            muniVal = '';
         }
 
         var le2024 = parseNum(c('LONGITUD EJECUTADA 2024(m)', 'LONGITUD EJECUTADA 2024 (m)', 'LONGITUD EJECUTADA 2024 (M)', 'LONGITUD EJECUTADA 2024', 'LONGITUD EJECTUADA 2024(m)', 'LONGITUD EJECTUADA 2024 (m)', 'LONGITUD EJECTUADA 2024'));
@@ -5246,7 +5347,7 @@ window.hideSummaryCard = function () {
 };
 
 function applyFilters() {
-    const search = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
+    const search = (document.getElementById('filter-search')?.value || '').toLowerCase().trim();
     const vigencia = getSelectValues('filter-vigencia');
     const municipio = getSelectValues('filter-municipio');
     const supervisor = getSelectValues('filter-supervisor');
@@ -5651,18 +5752,50 @@ function updateKPIs() {
         totLonConCuat += getRowLongitudContratadaPlan(r);
     });
 
-    document.getElementById('kpi-total').textContent = filteredData.length;
-    document.getElementById('kpi-activos').textContent = activos;
-    document.getElementById('kpi-por-liquidar').textContent = porLiquidar;
+    const elTot = document.getElementById('kpi-total'); if (elTot) elTot.textContent = filteredData.length;
+    const elAct = document.getElementById('kpi-activos'); if (elAct) elAct.textContent = activos;
+    const elPorLiq = document.getElementById('kpi-por-liquidar'); if (elPorLiq) elPorLiq.textContent = porLiquidar;
 
-    // Municipios y Subregiones Impactadas
-    const impactedMunis = new Set(
-        filteredData
-            .map(r => String(r['MUNICIPIO'] || '').trim().toUpperCase())
-            .filter(m => !isInvalidMuni(m))
-    );
+    // Municipios y Subregiones Impactadas (Sincronizado 100% con los 125 municipios oficiales y el Geovisor Territorial)
+    const cleanKPIStr = (str) => {
+        let s = String(str || '')
+            .replace(/\uFFFD/g, 'Ñ')
+            .replace(/\?/g, 'Ñ')
+            .replace(/¥/g, 'Ñ')
+            .replace(/\u00A5/g, 'Ñ')
+            .replace(/Ã‘/g, 'Ñ')
+            .replace(/Ã±/g, 'ñ');
+        if (typeof cleanMojibake === 'function') s = cleanMojibake(s);
+        return typeof normCanonicalMuni === 'function' ? normCanonicalMuni(s) : s.toUpperCase().trim();
+    };
+
+    const muniCountsKPI = {};
+    filteredData.forEach(r => {
+        const m = cleanKPIStr(r['MUNICIPIO']);
+        if (m && !isInvalidMuni(m)) {
+            muniCountsKPI[m] = (muniCountsKPI[m] || 0) + 1;
+        }
+    });
+
+    let cantMunisImpactados = 0;
+    if (typeof synMpioData !== 'undefined' && synMpioData && synMpioData.features && synMpioData.features.length === 125) {
+        synMpioData.features.forEach(f => {
+            const rawName = f.properties.NOMBRE_MPI || f.properties.MPIO_CNMBR || f.properties.NOM_MPIO || '';
+            const mNorm = cleanKPIStr(rawName);
+            if (mNorm && (muniCountsKPI[mNorm] || 0) > 0) cantMunisImpactados++;
+        });
+    } else if (typeof ALL_125_MUNI !== 'undefined' && Array.isArray(ALL_125_MUNI)) {
+        ALL_125_MUNI.forEach(item => {
+            const mNorm = cleanKPIStr(item.name);
+            if (mNorm && (muniCountsKPI[mNorm] || 0) > 0) cantMunisImpactados++;
+        });
+    } else {
+        const distinctCanonical = new Set(Object.keys(muniCountsKPI).filter(k => !isInvalidMuni(k)));
+        cantMunisImpactados = distinctCanonical.size;
+    }
+
     const elMunis = document.getElementById('kpi-municipios');
-    if (elMunis) elMunis.textContent = impactedMunis.size;
+    if (elMunis) elMunis.textContent = cantMunisImpactados;
 
     const impactedSubs = new Set(
         filteredData
@@ -6269,7 +6402,7 @@ function updateTerritorialCharts() {
     };
 
     // ── Filtros Activos ───────────────────────────────────────────────────────
-    const search = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
+    const search = (document.getElementById('filter-search')?.value || '').toLowerCase().trim();
     const vigencia = getSelectValues('filter-vigencia');
     const supervisor = getSelectValues('filter-supervisor');
     const indicador = getSelectValues('filter-indicador');
@@ -6322,8 +6455,11 @@ function updateTerritorialCharts() {
     const muniCount = {};
 
     municipioBaseRows.forEach(r => {
-        const muni = String(r['MUNICIPIO'] || '').trim().toUpperCase();
-        if (isInvalidMuni(muni)) return; // Ocultar registros sin municipio ("S/D") en los gráficos de Top Municipios
+        let muni = String(r['MUNICIPIO'] || '').trim();
+        if (typeof cleanMojibake === 'function') muni = cleanMojibake(muni);
+        if (isInvalidMuni(muni)) return; // Ocultar registros sin municipio ("S/D" o numéricos) en los gráficos de Top Municipios
+        muni = typeof normCanonicalMuni === 'function' ? normCanonicalMuni(muni) : muni.toUpperCase();
+        if (isInvalidMuni(muni)) return;
 
         const longM = getRowLongitudContratada(r) || 0;
         const inv = (r['APORTE DEPARTAMENTO'] || 0) + (r['ADICION DEPARTAMENTO'] || 0);
@@ -9119,7 +9255,7 @@ function initMLMapSearch() {
 let currentMapData = [];
 
 function applyMapFilters() {
-    const search = document.getElementById('map-filter-search')?.value.toLowerCase().trim() || '';
+    const search = (document.getElementById('map-filter-search')?.value || '').toLowerCase().trim();
     const vigencia = getSelectValues('map-filter-vigencia');
     const municipio = getSelectValues('map-filter-municipio');
     const supervisor = getSelectValues('map-filter-supervisor');
@@ -9234,16 +9370,20 @@ function updateMapCharts() {
     const subL = {}, subI = {}, munL = {}, munI = {};
     currentMapData.forEach(r => {
         const s = getCanonicalOfficialSubregion(r['SUBREGION'], r['MUNICIPIO']);
-        const m = String(r['MUNICIPIO'] || '').trim().toUpperCase();
+        let m = String(r['MUNICIPIO'] || '').trim();
+        if (typeof cleanMojibake === 'function') m = cleanMojibake(m);
         const l = mapMetric === 'contratado' ? getRowLongitudContratada(r) : getRowLongitudEjecutada(r);
         const i = (r['APORTE DEPARTAMENTO'] || 0) + (r['ADICION DEPARTAMENTO'] || 0);
         if (s) {
             subL[s] = (subL[s] || 0) + l;
             subI[s] = (subI[s] || 0) + i;
         }
-        if (!isInvalidMuni(m)) {
-            munL[m] = (munL[m] || 0) + l;
-            munI[m] = (munI[m] || 0) + i;
+        if (m && !isInvalidMuni(m)) {
+            const mNorm = typeof normCanonicalMuni === 'function' ? normCanonicalMuni(m) : m.toUpperCase();
+            if (!isInvalidMuni(mNorm)) {
+                munL[mNorm] = (munL[mNorm] || 0) + l;
+                munI[mNorm] = (munI[mNorm] || 0) + i;
+            }
         }
     });
 
@@ -15531,6 +15671,7 @@ let synMpioData = null;
 let synSubregionesData = null;
 let synSubregionesLabelsData = null;
 let synKmlGeojson = null;
+let synPointsGeojson = null;
 let synVialData = { primaria: null, secundaria: null, terciaria: null };
 let synCurrentPopup = null;
 let synLayersState = {
@@ -15713,7 +15854,8 @@ async function initSyntheticMap() {
             bearing: 0,
             maxZoom: 18,
             minZoom: 4,
-            attributionControl: false
+            attributionControl: false,
+            preserveDrawingBuffer: true
         });
 
         // Estilo minimalista claro Positron
@@ -16630,16 +16772,26 @@ function ensureSynTramosOnTop() {
 
 function applyIntervenedStatusToMpio(mpioData) {
     if (!mpioData || !mpioData.features) return;
-    const norm = (s) => normCanonicalMuni(s);
+    const cleanStr = (str) => {
+        let s = String(str || '')
+            .replace(/\uFFFD/g, 'Ñ')
+            .replace(/\?/g, 'Ñ')
+            .replace(/¥/g, 'Ñ')
+            .replace(/\u00A5/g, 'Ñ')
+            .replace(/Ã‘/g, 'Ñ')
+            .replace(/Ã±/g, 'ñ');
+        if (typeof cleanMojibake === 'function') s = cleanMojibake(s);
+        return typeof normCanonicalMuni === 'function' ? normCanonicalMuni(s) : s.toUpperCase().trim();
+    };
 
-    const dataToUse = (filteredData && filteredData.length > 0 ? filteredData : rawData) || [];
+    const dataToUse = (filteredData !== null && filteredData !== undefined ? filteredData : rawData) || [];
     const muniCounts = {};
     const muniLongEje = {};
     const muniLongCon = {};
 
     dataToUse.forEach(r => {
-        const m = norm(r['MUNICIPIO']);
-        if (m) {
+        const m = cleanStr(r['MUNICIPIO']);
+        if (m && !isInvalidMuni(m)) {
             muniCounts[m] = (muniCounts[m] || 0) + 1;
             const eje = getRowLongitudEjecutada(r) || 0;
             const con = getRowLongitudContratada(r) || 0;
@@ -16651,11 +16803,11 @@ function applyIntervenedStatusToMpio(mpioData) {
     let sinConvenioCount = 0;
     mpioData.features.forEach(f => {
         const rawName = f.properties.NOMBRE_MPI || f.properties.MPIO_CNMBR || f.properties.NOM_MPIO || '';
-        const mNorm = norm(rawName);
-        const count = muniCounts[mNorm] || 0;
-        const longEjeM = muniLongEje[mNorm] || 0;
+        const mNorm = cleanStr(rawName);
+        const count = (mNorm && muniCounts[mNorm]) || 0;
+        const longEjeM = (mNorm && muniLongEje[mNorm]) || 0;
         const longEjeKm = (longEjeM / 1000);
-        const longConM = muniLongCon[mNorm] || 0;
+        const longConM = (mNorm && muniLongCon[mNorm]) || 0;
         const longConKm = (longConM / 1000);
 
         const hasConvenio = count > 0;
@@ -16674,6 +16826,12 @@ function applyIntervenedStatusToMpio(mpioData) {
     if (sinConvEl) {
         sinConvEl.textContent = `(${sinConvenioCount})`;
     }
+
+    const conConvenioCount = (mpioData.features.length || 125) - sinConvenioCount;
+    const elMunis = document.getElementById('kpi-municipios');
+    if (elMunis) {
+        elMunis.textContent = conConvenioCount;
+    }
 }
 
 function refreshSyntheticMapData() {
@@ -16682,6 +16840,9 @@ function refreshSyntheticMapData() {
         if (synMap && synMapReady && synMap.getSource('syn-municipios-src')) {
             synMap.getSource('syn-municipios-src').setData(synMpioData);
         }
+    }
+    if (typeof renderSyntheticKmlFeatures === 'function') {
+        renderSyntheticKmlFeatures();
     }
 }
 
@@ -16814,10 +16975,15 @@ function parseKMLStringToGeoJSON(kmlText, convNum) {
     }
 }
 
+let synRenderSequence = 0;
+
 async function renderSyntheticKmlFeatures() {
     if (!synMap || !synMapReady) return;
 
-    // Determinar qué convenios deben mostrarse
+    synRenderSequence = (synRenderSequence || 0) + 1;
+    const currentSeq = synRenderSequence;
+
+    // Determinar qué convenios deben mostrarse estrictamente según el filtro activo
     let convNums = [];
     if (filteredData && filteredData.length > 0) {
         const set = new Set();
@@ -16826,6 +16992,9 @@ async function renderSyntheticKmlFeatures() {
             if (c) set.add(c);
         });
         convNums = Array.from(set);
+    } else if (filteredData && filteredData.length === 0) {
+        // Si el filtro no arrojó resultados, la capa debe quedar completamente vacía
+        convNums = [];
     } else if (rawData && rawData.length > 0) {
         const set = new Set();
         rawData.forEach(r => {
@@ -16835,6 +17004,18 @@ async function renderSyntheticKmlFeatures() {
         convNums = Array.from(set);
     } else {
         convNums = synAllKnownKmls;
+    }
+
+    if (convNums.length === 0) {
+        synKmlGeojson = { type: 'FeatureCollection', features: [] };
+        synPointsGeojson = { type: 'FeatureCollection', features: [] };
+        if (synMap.getSource('syn-tramos-src')) {
+            synMap.getSource('syn-tramos-src').setData(synKmlGeojson);
+        }
+        if (synMap.getSource('syn-tramos-points-src')) {
+            synMap.getSource('syn-tramos-points-src').setData(synPointsGeojson);
+        }
+        return;
     }
 
     // Cargar y almacenar en caché los KMLs que falten en lotes de 8
@@ -16869,6 +17050,9 @@ async function renderSyntheticKmlFeatures() {
             }));
         }
     }
+
+    // Verificar si llegó otra petición posterior de renderizado para evitar condiciones de carrera
+    if (currentSeq !== synRenderSequence) return;
 
     // Unir todas las features activas: Líneas completas + 1 único punto representativo por convenio
     const lineFeatures = [];
@@ -16934,6 +17118,7 @@ async function renderSyntheticKmlFeatures() {
 }
 
 function setupSyntheticControls() {
+    // 1. Botón Centrar
     const btnCentrar = document.getElementById('btn-synthetic-centrar');
     if (btnCentrar) {
         btnCentrar.addEventListener('click', () => {
@@ -16941,6 +17126,163 @@ function setupSyntheticControls() {
         });
     }
 
+    // 2. Botones de Zoom (+ / -)
+    const btnZoomIn = document.getElementById('btn-synthetic-zoom-in');
+    if (btnZoomIn) {
+        btnZoomIn.addEventListener('click', () => {
+            if (synMap) synMap.zoomIn();
+        });
+    }
+
+    const btnZoomOut = document.getElementById('btn-synthetic-zoom-out');
+    if (btnZoomOut) {
+        btnZoomOut.addEventListener('click', () => {
+            if (synMap) synMap.zoomOut();
+        });
+    }
+
+    // 3. Botón de Pantalla Completa
+    const btnFullscreen = document.getElementById('btn-synthetic-fullscreen');
+    const geovisorCard = document.getElementById('card-geovisor');
+    const fsIcon = document.getElementById('btn-synthetic-fullscreen-icon');
+    const fsText = document.getElementById('btn-synthetic-fullscreen-text');
+
+    const updateFsUI = (isFs) => {
+        if (fsIcon) {
+            fsIcon.className = isFs ? 'fa-solid fa-compress text-xs' : 'fa-solid fa-expand text-xs';
+        }
+        if (fsText) {
+            fsText.textContent = isFs ? 'Salir' : 'Pantalla Completa';
+        }
+        if (btnFullscreen) {
+            btnFullscreen.title = isFs ? 'Salir de pantalla completa' : 'Pantalla completa';
+        }
+        setTimeout(() => {
+            if (synMap) synMap.resize();
+        }, 150);
+    };
+
+    if (btnFullscreen && geovisorCard) {
+        btnFullscreen.addEventListener('click', () => {
+            const isCurrentlyFs = geovisorCard.classList.contains('card-geovisor-fullscreen') || (document.fullscreenElement === geovisorCard);
+            if (isCurrentlyFs) {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(() => {});
+                }
+                geovisorCard.classList.remove('card-geovisor-fullscreen');
+                updateFsUI(false);
+            } else {
+                if (geovisorCard.requestFullscreen) {
+                    geovisorCard.requestFullscreen().catch(() => {});
+                }
+                geovisorCard.classList.add('card-geovisor-fullscreen');
+                updateFsUI(true);
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            const isFs = document.fullscreenElement === geovisorCard;
+            if (!isFs && geovisorCard.classList.contains('card-geovisor-fullscreen')) {
+                geovisorCard.classList.remove('card-geovisor-fullscreen');
+            }
+            updateFsUI(isFs);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && geovisorCard.classList.contains('card-geovisor-fullscreen')) {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(() => {});
+                }
+                geovisorCard.classList.remove('card-geovisor-fullscreen');
+                updateFsUI(false);
+            }
+        });
+    }
+
+    // 4. Botón de Exportar Mapa / Pantallazo en Alta Resolución
+    const btnExportImg = document.getElementById('btn-synthetic-export-img');
+    if (btnExportImg) {
+        btnExportImg.addEventListener('click', async () => {
+            if (!synMap || !synMapReady) {
+                alert('El mapa aún se está inicializando. Por favor espera unos segundos.');
+                return;
+            }
+
+            const originalHtml = btnExportImg.innerHTML;
+            btnExportImg.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Exportando HD...';
+            btnExportImg.disabled = true;
+
+            try {
+                // Forzar redibujado de MapLibre GL
+                synMap.triggerRepaint();
+                await new Promise(resolve => setTimeout(resolve, 250));
+
+                const mapCanvas = synMap.getCanvas();
+                if (!mapCanvas) throw new Error('No se pudo acceder al canvas del mapa');
+
+                const width = mapCanvas.width;
+                const height = mapCanvas.height;
+                const headerHeight = Math.max(72, Math.round(height * 0.09));
+                const footerHeight = Math.max(38, Math.round(height * 0.045));
+
+                const compositeCanvas = document.createElement('canvas');
+                compositeCanvas.width = width;
+                compositeCanvas.height = height + headerHeight + footerHeight;
+                const ctx = compositeCanvas.getContext('2d');
+
+                // Fondo institucional del encabezado (Verde Antioquia)
+                ctx.fillStyle = '#084834';
+                ctx.fillRect(0, 0, width, headerHeight);
+
+                // Franja decorativa dorada
+                ctx.fillStyle = '#EAB308';
+                ctx.fillRect(0, headerHeight - 4, width, 4);
+
+                // Títulos en el encabezado
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold ' + Math.max(16, Math.round(headerHeight * 0.28)) + 'px "Plus Jakarta Sans", Poppins, sans-serif';
+                ctx.fillText('GEOVISOR TERRITORIAL DE ANTIOQUIA', 24, headerHeight * 0.44);
+
+                ctx.fillStyle = '#A7F3D0';
+                ctx.font = '500 ' + Math.max(11, Math.round(headerHeight * 0.18)) + 'px "Plus Jakarta Sans", Poppins, sans-serif';
+                const nowStr = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+                const convCount = (filteredData && filteredData.length) || (rawData && rawData.length) || 0;
+                ctx.fillText(`Gobernación de Antioquia • Secretaría de Infraestructura Física • ${convCount} Convenios Activos • ${nowStr}`, 24, headerHeight * 0.74);
+
+                // Dibujar el mapa MapLibre
+                ctx.drawImage(mapCanvas, 0, headerHeight, width, height);
+
+                // Pie de imagen institucional
+                ctx.fillStyle = '#0F172A';
+                ctx.fillRect(0, headerHeight + height, width, footerHeight);
+
+                ctx.fillStyle = '#94A3B8';
+                ctx.font = '500 ' + Math.max(10, Math.round(footerHeight * 0.35)) + 'px "Plus Jakarta Sans", Poppins, sans-serif';
+                ctx.fillText('DIAT - Dirección de Información, Análisis y Tecnología Territorial • Sistema de Información Vial', 24, headerHeight + height + footerHeight * 0.62);
+
+                const dataUrl = compositeCanvas.toDataURL('image/png', 1.0);
+                const downloadLink = document.createElement('a');
+                downloadLink.download = `Geovisor_Antioquia_HD_${new Date().toISOString().slice(0, 10)}.png`;
+                downloadLink.href = dataUrl;
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+
+                btnExportImg.innerHTML = '<i class="fa-solid fa-check text-xs"></i> ¡Descargado!';
+                setTimeout(() => {
+                    btnExportImg.innerHTML = originalHtml;
+                    btnExportImg.disabled = false;
+                }, 2000);
+            } catch (err) {
+                console.error('Error exportando mapa HD:', err);
+                alert('No se pudo exportar la imagen del mapa: ' + (err.message || err));
+                btnExportImg.innerHTML = originalHtml;
+                btnExportImg.disabled = false;
+            }
+        });
+    }
+
+    // 5. Modos del Geovisor (General, Subregional, Red Vial, Intervenciones)
     const modeBtns = document.querySelectorAll('.synthetic-mode-btn');
     modeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -18459,53 +18801,8 @@ const DiatAI = {
 
     // ── Formateador de Municipios Sin Convenio ──────────────────────────────
     formatMunicipiosSinConvenioResponse(data) {
-        const ALL_125_MUNI = [
-            { name: 'MEDELLÍN', sub: 'VALLE DE ABURRÁ' }, { name: 'BELLO', sub: 'VALLE DE ABURRÁ' }, { name: 'ITAGÜÍ', sub: 'VALLE DE ABURRÁ' },
-            { name: 'ENVIGADO', sub: 'VALLE DE ABURRÁ' }, { name: 'SABANETA', sub: 'VALLE DE ABURRÁ' }, { name: 'CALDAS', sub: 'VALLE DE ABURRÁ' },
-            { name: 'COPACABANA', sub: 'VALLE DE ABURRÁ' }, { name: 'GIRARDOTA', sub: 'VALLE DE ABURRÁ' }, { name: 'LA ESTRELLA', sub: 'VALLE DE ABURRÁ' },
-            { name: 'BARBOSA', sub: 'VALLE DE ABURRÁ' },
-            { name: 'CAUCASIA', sub: 'BAJO CAUCA' }, { name: 'EL BAGRE', sub: 'BAJO CAUCA' }, { name: 'NECHÍ', sub: 'BAJO CAUCA' },
-            { name: 'TARAZÁ', sub: 'BAJO CAUCA' }, { name: 'CÁCERES', sub: 'BAJO CAUCA' }, { name: 'ZARAGOZA', sub: 'BAJO CAUCA' },
-            { name: 'PUERTO BERRÍO', sub: 'MAGDALENA MEDIO' }, { name: 'PUERTO NARE', sub: 'MAGDALENA MEDIO' }, { name: 'PUERTO TRIUNFO', sub: 'MAGDALENA MEDIO' },
-            { name: 'YONDÓ', sub: 'MAGDALENA MEDIO' }, { name: 'CARACOLÍ', sub: 'MAGDALENA MEDIO' }, { name: 'MACEO', sub: 'MAGDALENA MEDIO' },
-            { name: 'AMALFI', sub: 'NORDESTE' }, { name: 'ANORÍ', sub: 'NORDESTE' }, { name: 'CISNEROS', sub: 'NORDESTE' },
-            { name: 'REMEDIOS', sub: 'NORDESTE' }, { name: 'SAN ROQUE', sub: 'NORDESTE' }, { name: 'SANTO DOMINGO', sub: 'NORDESTE' },
-            { name: 'SEGOVIA', sub: 'NORDESTE' }, { name: 'VEGACHÍ', sub: 'NORDESTE' }, { name: 'YALÍ', sub: 'NORDESTE' }, { name: 'YOLOMBÓ', sub: 'NORDESTE' },
-            { name: 'ANGOSTURA', sub: 'NORTE' }, { name: 'BELMIRA', sub: 'NORTE' }, { name: 'BRICEÑO', sub: 'NORTE' },
-            { name: 'CAMPAMENTO', sub: 'NORTE' }, { name: 'CAROLINA DEL PRÍNCIPE', sub: 'NORTE' }, { name: 'DONMATÍAS', sub: 'NORTE' },
-            { name: 'ENTRERRÍOS', sub: 'NORTE' }, { name: 'GÓMEZ PLATA', sub: 'NORTE' }, { name: 'GUADALUPE', sub: 'NORTE' },
-            { name: 'ITUANGO', sub: 'NORTE' }, { name: 'SAN ANDRÉS DE CUERQUIA', sub: 'NORTE' }, { name: 'SAN JOSÉ DE LA MONTAÑA', sub: 'NORTE' },
-            { name: 'SAN PEDRO DE LOS MILAGROS', sub: 'NORTE' }, { name: 'SANTA ROSA DE OSOS', sub: 'NORTE' }, { name: 'TOLEDO', sub: 'NORTE' },
-            { name: 'VALDIVIA', sub: 'NORTE' }, { name: 'YARUMAL', sub: 'NORTE' },
-            { name: 'ABRIAQUÍ', sub: 'OCCIDENTE' }, { name: 'ANZÁ', sub: 'OCCIDENTE' }, { name: 'ARMENIA', sub: 'OCCIDENTE' },
-            { name: 'BURITICÁ', sub: 'OCCIDENTE' }, { name: 'CAICEDO', sub: 'OCCIDENTE' }, { name: 'CAÑASGORDAS', sub: 'OCCIDENTE' },
-            { name: 'DABEIBA', sub: 'OCCIDENTE' }, { name: 'EBÉJICO', sub: 'OCCIDENTE' }, { name: 'FRONTINO', sub: 'OCCIDENTE' },
-            { name: 'GIRALDO', sub: 'OCCIDENTE' }, { name: 'HELICONIA', sub: 'OCCIDENTE' }, { name: 'LIBORINA', sub: 'OCCIDENTE' },
-            { name: 'OLAYA', sub: 'OCCIDENTE' }, { name: 'PEQUE', sub: 'OCCIDENTE' }, { name: 'SABANALARGA', sub: 'OCCIDENTE' },
-            { name: 'SAN JERÓNIMO', sub: 'OCCIDENTE' }, { name: 'SANTA FE DE ANTIOQUIA', sub: 'OCCIDENTE' }, { name: 'SOPETRÁN', sub: 'OCCIDENTE' }, { name: 'URAMITA', sub: 'OCCIDENTE' },
-            { name: 'ABEJORRAL', sub: 'ORIENTE' }, { name: 'ALEJANDRÍA', sub: 'ORIENTE' }, { name: 'ARGELIA', sub: 'ORIENTE' },
-            { name: 'COCORNÁ', sub: 'ORIENTE' }, { name: 'CONCEPCIÓN', sub: 'ORIENTE' }, { name: 'EL CARMEN DE VIBORAL', sub: 'ORIENTE' },
-            { name: 'EL PEÑOL', sub: 'ORIENTE' }, { name: 'EL RETIRO', sub: 'ORIENTE' }, { name: 'EL SANTUARIO', sub: 'ORIENTE' },
-            { name: 'GRANADA', sub: 'ORIENTE' }, { name: 'GUATAPÉ', sub: 'ORIENTE' }, { name: 'GUARNE', sub: 'ORIENTE' },
-            { name: 'LA CEJA', sub: 'ORIENTE' }, { name: 'LA UNIÓN', sub: 'ORIENTE' }, { name: 'MARINILLA', sub: 'ORIENTE' },
-            { name: 'NARIÑO', sub: 'ORIENTE' }, { name: 'RIONEGRO', sub: 'ORIENTE' }, { name: 'SAN CARLOS', sub: 'ORIENTE' },
-            { name: 'SAN FRANCISCO', sub: 'ORIENTE' }, { name: 'SAN LUIS', sub: 'ORIENTE' }, { name: 'SAN RAFAEL', sub: 'ORIENTE' },
-            { name: 'SAN VICENTE FERRER', sub: 'ORIENTE' }, { name: 'SONSÓN', sub: 'ORIENTE' },
-            { name: 'AMAGÁ', sub: 'SUROESTE' }, { name: 'ANDES', sub: 'SUROESTE' }, { name: 'ANGELÓPOLIS', sub: 'SUROESTE' },
-            { name: 'BETANIA', sub: 'SUROESTE' }, { name: 'BETULIA', sub: 'SUROESTE' }, { name: 'CARAMANTA', sub: 'SUROESTE' },
-            { name: 'CIUDAD BOLÍVAR', sub: 'SUROESTE' }, { name: 'CONCORDIA', sub: 'SUROESTE' }, { name: 'FREDONIA', sub: 'SUROESTE' },
-            { name: 'HISPANIA', sub: 'SUROESTE' }, { name: 'JARDÍN', sub: 'SUROESTE' }, { name: 'JERICÓ', sub: 'SUROESTE' },
-            { name: 'LA PINTADA', sub: 'SUROESTE' }, { name: 'MONTEBELLO', sub: 'SUROESTE' }, { name: 'PUEBLORRICO', sub: 'SUROESTE' },
-            { name: 'SALGAR', sub: 'SUROESTE' }, { name: 'SANTA BÁRBARA', sub: 'SUROESTE' }, { name: 'TÁMESIS', sub: 'SUROESTE' },
-            { name: 'TARSO', sub: 'SUROESTE' }, { name: 'TITIRIBÍ', sub: 'SUROESTE' }, { name: 'URRAO', sub: 'SUROESTE' },
-            { name: 'VALPARAÍSO', sub: 'SUROESTE' }, { name: 'VENECIA', sub: 'SUROESTE' },
-            { name: 'APARTADÓ', sub: 'URABÁ' }, { name: 'ARBOLETES', sub: 'URABÁ' }, { name: 'CAREPA', sub: 'URABÁ' },
-            { name: 'CHIGORODÓ', sub: 'URABÁ' }, { name: 'MURINDÓ', sub: 'URABÁ' }, { name: 'MUTATÁ', sub: 'URABÁ' },
-            { name: 'NECOCLÍ', sub: 'URABÁ' }, { name: 'SAN JUAN DE URABÁ', sub: 'URABÁ' }, { name: 'SAN PEDRO DE URABÁ', sub: 'URABÁ' },
-            { name: 'TURBO', sub: 'URABÁ' }, { name: 'VIGÍA DEL FUERTE', sub: 'URABÁ' }
-        ];
-
-        const sinConvenio = ALL_125_MUNI.filter(m => {
+        const muniList = (typeof ALL_125_MUNI !== 'undefined' && ALL_125_MUNI) || (typeof window !== 'undefined' && window.ALL_125_MUNI) || [];
+        const sinConvenio = muniList.filter(m => {
             return !data.some(r => isSameMuni(r['MUNICIPIO'], m.name));
         });
 

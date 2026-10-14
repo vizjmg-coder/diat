@@ -4387,3 +4387,32 @@ input,
 .dark .flujo-mode-btn.active {
     background-color: #334155 !important;
 }
+
+/* =============================================================================
+   36. GEOVISOR TERRITORIAL: PANTALLA COMPLETA Y CONTROLES
+   ============================================================================= */
+#card-geovisor.card-geovisor-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 999999 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #FFFFFF !important;
+}
+
+#card-geovisor.card-geovisor-fullscreen > div:last-child {
+    height: calc(100vh - 58px) !important;
+    min-height: calc(100vh - 58px) !important;
+    flex: 1 1 auto !important;
+}
+
+#card-geovisor.card-geovisor-fullscreen #synthetic-map {
+    width: 100% !important;
+    height: 100% !important;
+}
